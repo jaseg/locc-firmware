@@ -59,6 +59,12 @@ void loop(){ //one frame
         receive_status = uart_getc();
         char c = receive_status&0xFF;
         receive_status &= 0xFF00;
+        /* Command set:
+         * [command]\n
+         * Commands:
+         * o - open lock
+         * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
+         */
         if(!receive_status){
             switch(protocol_state){
                 case 0:
