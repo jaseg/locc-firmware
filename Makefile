@@ -16,7 +16,7 @@ TARGET = telefon
 # to get a full listing.
 AVRDUDE_PROGRAMMER = arduino
 
-AVRDUDE_PORT = /dev/ttyACM0 -b 115200
+AVRDUDE_PORT = /dev/ttyUSB0 -b 57600
 
 ############# Don't need to change below here for most purposes  (Elliot)
 
@@ -28,7 +28,7 @@ OPT = s
 FORMAT = ihex
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c uart.c
+SRC = $(TARGET).c uart.c c_locc.c
 
 # List Assembler source files here.
 # Make them always end in a capital .S.  Files ending in a lowercase .s

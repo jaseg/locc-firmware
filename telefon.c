@@ -3,6 +3,7 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include "uart.h"
+#include "c_locc.h"
 
 void setup(void);
 void loop(void);
@@ -13,8 +14,10 @@ int main(void){
 }
 
 void setup(){
-    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(115201, F_CPU));
-    PORTB |= 0x38;
+    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(9600, F_CPU));
+    PORTD |= 0x1C;
+    DDRB |= 0x20;
+    c_locc_cetup();
     sei();
 }
 
@@ -36,6 +39,20 @@ int parseHex(char* buf){
     return result;
 }
 
+uint8_t protocol_state = 0;
+uint8_t cmd_target = 0;
+
+void set_led(uint8_t num, uint8_t val){
+    switch(num){
+        case '0':
+            if(val)
+                PORTB |= 0x20;
+            else
+                PORTB &= 0xDF;
+            break;
+    }
+}
+
 void loop(){ //one frame
     uint16_t receive_status = 1;
     do{ //Always empty the receive buffer since there are _delay_xxs in the following code and thus this might not run all that often.
@@ -43,13 +60,38 @@ void loop(){ //one frame
         char c = receive_status&0xFF;
         receive_status &= 0xFF00;
         if(!receive_status){
+            switch(protocol_state){
+                case 0:
+                    if(c == '\n')
+                        protocol_state = 1;
+                    break;
+                case 1:
+                    switch(c){
+                        case 'o':
+                            c_locc_open();
+                            protocol_state = 0;
+                            break;
+                        case 'l':
+                            protocol_state = 2;
+                            break;
+                    }
+                    break;
+                case 2:
+                    cmd_target = c;
+                    protocol_state = 3;
+                    break;
+                case 3:
+                    set_led(cmd_target, c-'0');
+                    protocol_state = 0;
+                    break;
+            }
         }
     }while(!receive_status);
     //Get switch states
     static uint8_t dial_counter = 0;
     static uint8_t state_impulse = 0;
     if(state_impulse <= 1){
-        if(PINB & 0x20){
+        if(PIND & 0x08){
             if(state_impulse == 0){
                 state_impulse = 0x40;
                 dial_counter++;
@@ -62,9 +104,9 @@ void loop(){ //one frame
     }
     static uint8_t state_dialing = 0;
     if(state_dialing <= 1){
-        if(PINB & 0x10){
+        if(PIND & 0x10){
             if(state_dialing == 0){
-                state_dialing = 0xFF;
+                state_dialing = 0x80;
                 if(dial_counter == 10){
                     dial_counter = 0;
                 }
@@ -80,7 +122,7 @@ void loop(){ //one frame
     }
     static uint8_t state_hangup = 0;
     if(state_hangup <= 1){
-        if(PINB & 0x08){
+        if(PIND & 0x04){
             if(state_hangup == 0){
                 state_hangup = 0xFF;
                 uart_putc('h');
@@ -92,6 +134,5 @@ void loop(){ //one frame
     }else{
         state_hangup--;
     }
-    PORTB |= 0x08;
-    _delay_us(100);
+    _delay_us(255);
 }
