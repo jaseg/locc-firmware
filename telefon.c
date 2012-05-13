@@ -41,6 +41,8 @@ int parseHex(char* buf){
 
 uint8_t protocol_state = 0;
 uint8_t cmd_target = 0;
+uint8_t started = 32;
+char password = "ALLHAILDISCORDIAFOOBAR23PONIES!!";
 
 void set_led(uint8_t num, uint8_t val){
     switch(num){
@@ -66,30 +68,38 @@ void loop(){ //one frame
          * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
          */
         if(!receive_status){
-            switch(protocol_state){
-                case 0:
-                    if(c == '\n')
-                        protocol_state = 1;
-                    break;
-                case 1:
-                    switch(c){
-                        case 'o':
-                            c_locc_open();
-                            protocol_state = 0;
-                            break;
-                        case 'l':
-                            protocol_state = 2;
-                            break;
-                    }
-                    break;
-                case 2:
-                    cmd_target = c;
-                    protocol_state = 3;
-                    break;
-                case 3:
-                    set_led(cmd_target, c-'0');
-                    protocol_state = 0;
-                    break;
+            if(started > 0){
+                if(c == password[32-started]){
+                    started--;
+                }else{
+                    started = 32;
+                }
+            }else{
+                switch(protocol_state){
+                    case 0:
+                        if(c == '\n')
+                            protocol_state = 1;
+                        break;
+                    case 1:
+                        switch(c){
+                            case 'o':
+                                c_locc_open();
+                                protocol_state = 0;
+                                break;
+                            case 'l':
+                                protocol_state = 2;
+                                break;
+                        }
+                        break;
+                    case 2:
+                        cmd_target = c;
+                        protocol_state = 3;
+                        break;
+                    case 3:
+                        set_led(cmd_target, c-'0');
+                        protocol_state = 0;
+                        break;
+                }
             }
         }
     }while(!receive_status);
