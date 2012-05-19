@@ -27,10 +27,11 @@
 /* // HEADER //////////////////////////////////////////////////////////////////////////////////////////////////////// */
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdbool.h>
 
 /* I/O Port configuration */
 /* Note: The following code will not affect other I/O pins than the I/O Pins selected below. You can 
-   use them freely for other proposes */
+       	 use them freely for other proposes */
 
 /* Cylinder */
 #define CYLINDER_IO_DDR DDRD				/* Data direction register of the used port */
@@ -39,10 +40,10 @@
 
 /* Opening datagram */
 /* Note: This is the opening datagram that will be sent to the cylinder this example contains the default
-   code (123456) which is the factory setup */
-uint8_t wakeupTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
-uint8_t openTelegram[]   = 	{0x02, 0x12, 0x34, 0x56, 0x00, 0x00, 0x5c, 0x00};
-#define CYLINDER_TELEGRAM_TIMING_DELAY 400
+         code (123456) which is the factory setup */
+int wakeupTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
+int openTelegram[] = 	{0x02, 0x12, 0x34, 0x56, 0x00, 0x00, 0x5c, 0x00};
+#define CYLINDER_TELEGRAM_TIMING_DELAY 40
 
 /* ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
@@ -50,48 +51,82 @@ uint8_t openTelegram[]   = 	{0x02, 0x12, 0x34, 0x56, 0x00, 0x00, 0x5c, 0x00};
 /* // IMPLEMENTATION //////////////////////////////////////////////////////////////////////////////////////////////// */
 
 /* Configure I/O Ports */
-void c_locc_cetup(void){
-    CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
-    CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
+void c_locc_cetup(void)
+{
+	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
+	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
+	return;
+}
+
+/* Handle LEDs */
+void systemLedCtrl(uint8_t ledID, bool status)
+{
+	return;
+}
+
+/* Waste some time */
+void systemDelay10us(uint8_t value)
+{
+	while(value--)
+		_delay_us(10);
+	return;
+}
+void systemDelay10ms(uint8_t value)
+{
+	while(value--)
+		_delay_ms(10);
+	return;
+}
+void systemDelay1s(uint8_t value)
+{
+	while(value--)
+		_delay_ms(1000);
+	return;
 }
 
 /* Send telegram to cylinder */
-void sendCylinderTelegram(uint8_t *telegram, uint8_t length)
+void sendCylinderTelegram(int *telegram, int length)
 {
-    /* Telegram */
-    for(uint8_t j=0; j<=length;j++){
-        for(uint8_t i=7; i>=0; i--){
-            if((*telegram >> i) & 1)
-            {
-                /* generate logical HIGH */
-                CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Set I/O Pin to input (High impedance) */
-                CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);	/* Switch internal pullup resistor on */
-                _delay_us(CYLINDER_TELEGRAM_TIMING_DELAY);
-                /* generate logical LOW */
-                CYLINDER_IO_DDR  |= (1 << CYLINDER_IO_PIN);	/* Set I/O Pin to output (Low impedance) */
-                CYLINDER_IO_PORT &= ~(1 << CYLINDER_IO_PIN);	/* Switch I/O pin to low */
-                _delay_us(CYLINDER_TELEGRAM_TIMING_DELAY);
-            }else{
-                /* generate logical LOW */
-                CYLINDER_IO_DDR  |= (1 << CYLINDER_IO_PIN);	/* Set I/O Pin to output (Low impedance) */
-                CYLINDER_IO_PORT &= ~(1 << CYLINDER_IO_PIN);	/* Switch I/O pin to low */
-                _delay_us(CYLINDER_TELEGRAM_TIMING_DELAY);
-                /* generate logical HIGH */
-                CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Set I/O Pin to input (High impedance) */
-                CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);	/* Switch internal pullup resistor on */
-                _delay_us(CYLINDER_TELEGRAM_TIMING_DELAY);
-            }
-        }
-        telegram++;
-    }
+	int i,j = 0;
 
-    /* generate logical HIGH */
-    CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);				/* Set I/O Pin to input (High impedance) */
-    CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);				/* Switch internal pullup resistor on */
+	/* Telegram */
+	for(j=0; j<=length;j++)
+	{
+		for(i=7; i>=0; i--)
+			if((*telegram >> i) & 1)
+			{
+				/* generate logical HIGH */
+				CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Set I/O Pin to input (High impedance) */
+				CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);	/* Switch internal pullup resistor on */
+				systemDelay10us(CYLINDER_TELEGRAM_TIMING_DELAY);
+				/* generate logical LOW */
+				CYLINDER_IO_DDR  |= (1 << CYLINDER_IO_PIN);	/* Set I/O Pin to output (Low impedance) */
+				CYLINDER_IO_PORT &= ~(1 << CYLINDER_IO_PIN);	/* Switch I/O pin to low */
+				systemDelay10us(CYLINDER_TELEGRAM_TIMING_DELAY);
+			}
+			else
+			{
+				/* generate logical LOW */
+				CYLINDER_IO_DDR  |= (1 << CYLINDER_IO_PIN);	/* Set I/O Pin to output (Low impedance) */
+				CYLINDER_IO_PORT &= ~(1 << CYLINDER_IO_PIN);	/* Switch I/O pin to low */
+				systemDelay10us(CYLINDER_TELEGRAM_TIMING_DELAY);
+				/* generate logical HIGH */
+				CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Set I/O Pin to input (High impedance) */
+				CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);	/* Switch internal pullup resistor on */
+				systemDelay10us(CYLINDER_TELEGRAM_TIMING_DELAY);
+			}
+
+		telegram++;
+	}
+
+	/* generate logical HIGH */
+	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);				/* Set I/O Pin to input (High impedance) */
+	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);				/* Switch internal pullup resistor on */
+
+	return;
 }
 
-void c_locc_open(void){
-    sendCylinderTelegram(wakeupTelegram,8);
-    _delay_ms(10);
-    sendCylinderTelegram(openTelegram,8);
+void c_locc_open(){
+    sendCylinderTelegram(openTelegram,8);	/* Send the 16 bytes long opening diagram */
+    systemDelay10ms(6); /* how long is the lock open ? */
 }
