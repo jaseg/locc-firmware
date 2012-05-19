@@ -15,6 +15,7 @@ int main(void){
 
 void setup(){
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(9600, F_CPU));
+    DDRD |= 0x01;
     PORTD |= 0x1C;
     DDRB |= 0x20;
     c_locc_cetup();
@@ -42,7 +43,7 @@ int parseHex(char* buf){
 uint8_t protocol_state = 0;
 uint8_t cmd_target = 0;
 uint8_t started = 32;
-char password = "ALLHAILDISCORDIAFOOBAR23PONIES!!";
+char* password = "ALLHAILDISCORDIAFOOBAR23PONIES!!";
 
 void set_led(uint8_t num, uint8_t val){
     switch(num){
@@ -102,7 +103,7 @@ void loop(){ //one frame
                 }
             }
         }
-    }while(!receive_status);
+    }while(!receive_status || started > 0);
     //Get switch states
     static uint8_t dial_counter = 0;
     static uint8_t state_impulse = 0;
@@ -123,7 +124,7 @@ void loop(){ //one frame
         if(PIND & 0x10){
             if(state_dialing == 0){
                 state_dialing = 0x80;
-                if(dial_counter == 10){
+                if(dial_counter >= 10){
                     dial_counter = 0;
                 }
                 uart_putc('0'+dial_counter);
