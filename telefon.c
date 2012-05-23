@@ -18,10 +18,7 @@ void setup(){
     DDRD |= 0x01;
     PORTD |= 0x1C;
     DDRB |= 0x20;
-    c_locc_cetup();
-    for(;;){
-        c_locc_open();
-    }
+    loccSetup();
     sei();
 }
 
@@ -87,8 +84,7 @@ void loop(){ //one frame
                     case 1:
                         switch(c){
                             case 'o':
-                                c_locc_open();
-                                c_locc_counter = 36000; // 4 cycles/ms*1000ms*9s
+                                loccOpen();
                                 protocol_state = 0;
                                 break;
                             case 'l':
