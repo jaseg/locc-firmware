@@ -3,7 +3,7 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include "uart.h"
-#include "c_locc.h"
+#include "locc.h"
 
 void setup(void);
 void loop(void);

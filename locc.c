@@ -144,6 +144,7 @@ void loccSetup() {
 
 	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
 	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
+    CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN); /* power cylinder on */
 
     return ;
 }
@@ -154,6 +155,7 @@ void loccOpen() {
     for(int t=0; t < 9; t++) {
         systemDelay1s(1); /* how long is the lock open? */
         uart_putc('Z');
+        systemDelay1s(1); /* how long is the lock open? */
     }
     uart_putc('R');
     CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN); /* power cylinder on */
