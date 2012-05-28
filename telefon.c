@@ -151,11 +151,5 @@ void loop(){ //one frame
     }else{
         state_hangup--;
     }
-    if(c_locc_counter){
-        c_locc_counter--;
-        if(!c_locc_counter){
-            c_locc_deactivate();
-        }
-    }
     _delay_us(255);
 }
