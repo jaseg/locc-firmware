@@ -15,6 +15,11 @@ int main(void){
 
 void setup(){
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(9600, F_CPU));
+    sei();
+    for(;;){
+        uart_putc('O');
+        _delay_ms(10);
+    }
     DDRD |= 0x01;
     PORTD |= 0x1C;
     DDRB |= 0x20;

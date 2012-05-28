@@ -69,7 +69,6 @@ void sendCylinderTelegram(uint8_t *telegram, uint8_t length)
     CYLINDER_IO_PORT |= _BV(CYLINDER_IO_PIN); /* Switch internal pullup resistor on */
     _delay_ms(59);
 
-    /* Telegram */
     for(uint8_t j=0; j<=length;j++){
         for(uint8_t i=7; i>=0; i--){
             if((*telegram >> i) & 1)
