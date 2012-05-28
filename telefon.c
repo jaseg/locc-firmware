@@ -15,11 +15,6 @@ int main(void){
 
 void setup(){
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(9600, F_CPU));
-    sei();
-    for(;;){
-        uart_putc('O');
-        _delay_ms(10);
-    }
     DDRD |= 0x01;
     PORTD |= 0x1C;
     DDRB |= 0x20;
@@ -51,7 +46,6 @@ int parseHex(char* buf){
 uint8_t protocol_state = 0;
 uint8_t cmd_target = 0;
 uint8_t started = 32;
-uint16_t c_locc_counter = 0;
 char* password = "ALLHAILDISCORDIAFOOBAR23PONIES!!";
 
 void set_led(uint8_t num, uint8_t val){
