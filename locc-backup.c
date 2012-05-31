@@ -28,7 +28,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdbool.h>
+
 #include "locc.h"
+#include "uart.h"
+#include "secret.h"
 
 /* I/O Port configuration */
 /* Note: The following code will not affect other I/O pins than the I/O Pins selected below. You can 
@@ -44,52 +47,10 @@
 #define CYLINDER_VCC_PORT PORTD				/* Port I/O Register of the used port */
 #define CYLINDER_VCC_PIN 6				/* Pin number of the used pin */
 
-/* Green LED */
-#define GRNLED_DDR DDRB					/* Data direction register of the used port */
-#define GRNLED_PORT PORTB				/* Port I/O Register of the used port */
-#define GRNLED_PIN 1					/* Pin number of the used pin */
-#define GRN 1
-
-/* Red LED */
-#define REDLED_DDR DDRB					/* Data direction register of the used port */
-#define REDLED_PORT PORTB				/* Port I/O Register of the used port */
-#define REDLED_PIN 5					/* Pin number of the used pin */
-#define RED 0
-
-/* OPEN SIGNAL */
-#define OPEN_DDR DDRD					/* Data direction register of the used port */
-#define OPEN_PORT PORTD					/* Port I/O Register of the used port */
-#define OPEN_PINR PIND					/* Port I/O Register of the used port */
-#define OPEN_PIN 3					/* Pin number of the used pin */
-
-
 /* Opening datagram */
 /* Note: This is the opening datagram that will be sent to the cylinder this example contains the default
          code (123456) which is the factory setup */
-int wakeupTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
-int openTelegram[] =   {0x02, 0x23, 0x42, 0xb7, 0x00, 0x00, 0x63, 0x00};
-
 #define CYLINDER_TELEGRAM_TIMING_DELAY 50
-
-/* ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
-
-
-/* // IMPLEMENTATION //////////////////////////////////////////////////////////////////////////////////////////////// */
-
-/* Configure I/O Ports */
-void loccSetup(void)
-{
-	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
-	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
-
-	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
-	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
-
-	//GRNLED_DDR |= (1 << GRNLED_PIN);		/* Setup green LED */
-	//GRNLED_PORT &= ~(1 << GRNLED_PIN);
-
-	return;
-}
 
 /* Waste some time */
 void systemDelay10us(uint8_t value)
@@ -175,6 +136,29 @@ void sendCylinderTelegram(int *telegram, int length)
 	return;
 }
 
-void loccOpen(){
-    sendCylinderTelegram(openTelegram,8);
+void loccSetup() {
+	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
+	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
+
+	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
+	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
+    CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN); /* power cylinder on */
+
+    return ;
+}
+
+void loccOpen() {
+    CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN); /* power cylinder on */
+    _delay_ms(1000);
+    sendCylinderTelegram(open_datagram,8);	/* Send the 8 byte opening datagram */
+    for(int t=0; t < 9; t++) {
+        systemDelay1s(1); /* how long is the lock open? */
+        uart_putc('Z');
+        uart_putc('\n');
+        //systemDelay1s(1); /* how long is the lock open? */
+    }
+    uart_putc('R');
+    uart_putc('\n');
+    CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN); /* power cylinder on */
+    return ;
 }

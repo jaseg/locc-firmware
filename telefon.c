@@ -14,10 +14,14 @@ int main(void){
 }
 
 void setup(){
-    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(9600, F_CPU));
-    DDRD |= 0x01;
+    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(57600, F_CPU));
+    DDRD |= 0x02; //uart tx
+    //DDRD |= 0x01;
+    //PD2 hangup
+    //PD3 impulse
+    //PD4 dialing
     PORTD |= 0x1C;
-    DDRB |= 0x20;
+    DDRB |= 0x20; //???
     loccSetup();
     sei();
 }
@@ -90,6 +94,10 @@ void loop(){ //one frame
                             case 'l':
                                 protocol_state = 2;
                                 break;
+                            case '\n':
+                                break;
+                            default:
+                                protocol_state = 0;
                         }
                         break;
                     case 2:
