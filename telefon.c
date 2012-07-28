@@ -16,6 +16,7 @@ int main(void){
 void setup(){
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(57600, F_CPU));
     DDRD |= 0x02; //uart tx
+    DDRC |= 0x07;
     //DDRD |= 0x01;
     //PD2 hangup
     //PD3 impulse
@@ -56,6 +57,24 @@ void set_led(uint8_t num, uint8_t val){
                 PORTB |= 0x20;
             else
                 PORTB &= 0xDF;
+            break;
+        case '1':
+            if(val)
+                PORTC |= 0x01;
+            else
+                PORTC &= 0xFE;
+            break;
+        case '2':
+            if(val)
+                PORTC |= 0x02;
+            else
+                PORTC &= 0xFD;
+            break;
+        case '3':
+            if(val)
+                PORTC |= 0x04;
+            else
+                PORTC &= 0xFB;
             break;
     }
 }
@@ -146,14 +165,20 @@ void loop(){ //one frame
         state_dialing--;
     }
     static uint8_t state_hangup = 0;
-    if(state_hangup <= 1){
+    if(state_hangup <= 2){
         if(PIND & 0x04){
             if(state_hangup == 0){
                 state_hangup = 0xFF;
                 uart_putc('h');
                 uart_putc('\n');
             }
+            state_hangup = 1;
         }else{
+            if(state_hangup == 1){
+                state_hangup = 0xFF;
+                uart_putc('i');
+                uart_putc('\n');
+            }
             state_hangup = 0;
         }
     }else{
