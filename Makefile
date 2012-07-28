@@ -85,7 +85,7 @@
 # The gcc tutorial http://www.mikrocontroller.net/articles/AVR-GCC-Tutorial
 # uses main.c as the main file, so you have to use the name main here.
 # On unix like systems (linux etc.) all file names are case sensitive!
-PROJECTNAME=telefon
+PROJECTNAME=c_locc
 # <==
 
 # ==> MCU name
