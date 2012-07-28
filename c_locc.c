@@ -22,7 +22,7 @@
 #include <avr/interrupt.h>
 #include "uart.h"
 #include "locc.h"
-#include "keypad.c"
+#include "keypad.h"
 
 void setup(void);
 void loop(void);
@@ -43,6 +43,7 @@ void setup(){
     PORTD |= 0x1C;
     DDRB |= 0x20; //???
     loccSetup();
+    keypad_setup();
     sei();
 }
 
@@ -150,7 +151,8 @@ void loop(){ //one frame
             }
         }
     }while(!receive_status || started > 0);
-    //Get switch states
+
+    //Rotary phone stuff
     static uint8_t dial_counter = 0;
     static uint8_t state_impulse = 0;
     if(state_impulse <= 1){
@@ -203,5 +205,12 @@ void loop(){ //one frame
     }else{
         state_hangup--;
     }
+
+    //Keypad stuff
+    uint8_t pressed_key = keypad_scan();
+    if(pressed_key < 0xA)
+        uart_putc('0'+pressed_key);
+    else
+        uart_putc('0'-0xA+pressed_key);
     _delay_us(255);
 }
