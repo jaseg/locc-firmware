@@ -1,2 +1,5 @@
 The all-new uber-awesome LDAP-connected c-lab-c_locc
 courtesy of jaseg & lynxis, thanks to DXT and MrLolcats17!
+
+To build this stuff you need a copy of the LUFA usb library for (among others)
+AVR microcontrollers in a folder called "lufa".

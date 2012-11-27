@@ -17,15 +17,55 @@
 */
 
 #include <avr/io.h>
-#include <util/delay.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include "uart.h"
+#include <avr/wdt.h>
+#include <avr/power.h>
+#include <util/delay.h>
+
+#include "Descriptors.h"
+#include <LUFA/Version.h>
+#include <LUFA/Drivers/USB/USB.h>
+#include <LUFA/Drivers/USB/Class/CDCClass.h>
+
 #include "locc.h"
 #include "keypad.h"
 
 void setup(void);
 void loop(void);
+void usb_putc(char c);
+void EVENT_USB_Device_ConfigurationChanged(void);
+void EVENT_USB_Device_ControlRequest(void);
+
+USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
+    {
+        .Config =
+            {
+                .ControlInterfaceNumber   = 0,
+                .DataINEndpoint           =
+                    {
+                        .Address          = CDC_TX_EPADDR,
+                        .Size             = CDC_TXRX_EPSIZE,
+                        .Banks            = 1,
+                    },
+                .DataOUTEndpoint =
+                    {
+                        .Address          = CDC_RX_EPADDR,
+                        .Size             = CDC_TXRX_EPSIZE,
+                        .Banks            = 1,
+                    },
+                .NotificationEndpoint =
+                    {
+                        .Address          = CDC_NOTIFICATION_EPADDR,
+                        .Size             = CDC_NOTIFICATION_EPSIZE,
+                        .Banks            = 1,
+                    },
+            },
+    };
+
+void usb_putc(char c){
+    //CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+}
 
 int main(void){
     setup();
@@ -33,17 +73,22 @@ int main(void){
 }
 
 void setup(){
-    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(57600, F_CPU));
-    DDRD |= 0x02; //uart tx
-    DDRC |= 0x07;
-    //DDRD |= 0x01;
+    //Disable watchdog if enabled by bootloader/fuses FIXME is the actually necessary? I ctrlc-ctrlv'ed this from the lufa sources
+    MCUSR &= ~(1 << WDRF);
+    wdt_disable();
+
+    //output setup
+	//DDRC |= 0x07;
     //PD2 hangup
     //PD3 impulse
     //PD4 dialing
-    PORTD |= 0x1C;
-    DDRB |= 0x20; //???
+    //PORTD |= 0x1C;
+    //DDRB |= 0x20; //??? FIXME
+	
     loccSetup();
     keypad_setup();
+	clock_prescale_set(clock_div_1);
+    USB_Init();
     sei();
 }
 
@@ -67,8 +112,6 @@ int parseHex(char* buf){
 
 uint8_t protocol_state = 0;
 uint8_t cmd_target = 0;
-uint8_t started = 32;
-char* password = "ALLHAILDISCORDIAFOOBAR23PONIES!!";
 
 void set_led(uint8_t num, uint8_t val){
     switch(num){
@@ -100,58 +143,54 @@ void set_led(uint8_t num, uint8_t val){
 }
 
 void loop(){ //one frame
-    uint16_t receive_status = 1;
+    int receive_status = -1;
     do{ //Always empty the receive buffer since there are _delay_xxs in the following code and thus this might not run all that often.
-        receive_status = uart_getc();
+        receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
         char c = receive_status&0xFF;
-        receive_status &= 0xFF00;
+		
         /* Command set:
          * [command]\n
          * Commands:
          * o - open lock
          * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
          */
-        if(!receive_status){
-            if(started > 0){
-                if(c == password[32-started]){
-                    started--;
-                }else{
-                    started = 32;
-                }
-            }else{
-                switch(protocol_state){
-                    case 0:
-                        if(c == '\n')
-                            protocol_state = 1;
-                        break;
-                    case 1:
-                        switch(c){
-                            case 'o':
-                                loccOpen();
-                                protocol_state = 0;
-                                break;
-                            case 'l':
-                                protocol_state = 2;
-                                break;
-                            case '\n':
-                                break;
-                            default:
-                                protocol_state = 0;
-                        }
-                        break;
-                    case 2:
-                        cmd_target = c;
-                        protocol_state = 3;
-                        break;
-                    case 3:
-                        set_led(cmd_target, c-'0');
-                        protocol_state = 0;
-                        break;
-                }
-            }
+        if(receive_status >= 0){
+			CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+				  
+			switch(protocol_state){
+				case 0:
+					if(c == '\n')
+						protocol_state = 1;
+					break;
+				case 1:
+					switch(c){
+						case 'o':
+							loccOpen();
+							protocol_state = 0;
+							break;
+						case 'l':
+							protocol_state = 2;
+							break;
+						case '\n':
+							break;
+						default:
+							protocol_state = 0;
+					}
+					break;
+				case 2:
+					cmd_target = c;
+					protocol_state = 3;
+					break;
+				case 3:
+					set_led(cmd_target, c-'0');
+					protocol_state = 0;
+					break;
+			}
         }
-    }while(!receive_status || started > 0);
 
+    }while(receive_status >= 0);
+
+	/*
     //Rotary phone stuff
     static uint8_t dial_counter = 0;
     static uint8_t state_impulse = 0;
@@ -175,9 +214,9 @@ void loop(){ //one frame
                 if(dial_counter >= 10){
                     dial_counter = 0;
                 }
-                uart_putc('0'+dial_counter);
+                usb_putc('0'+dial_counter);
                 dial_counter = 0;
-                uart_putc('\n');
+                usb_putc('\n');
             }
         }else{
             state_dialing = 0;
@@ -190,27 +229,43 @@ void loop(){ //one frame
         if(PIND & 0x04){
             if(state_hangup == 0){
                 state_hangup = 0xFF;
-                uart_putc('h');
-                uart_putc('\n');
+                usb_putc('h');
+                usb_putc('\n');
             }
             state_hangup = 1;
         }else{
             if(state_hangup == 1){
                 state_hangup = 0xFF;
-                uart_putc('i');
-                uart_putc('\n');
+                usb_putc('i');
+                usb_putc('\n');
             }
             state_hangup = 0;
         }
     }else{
         state_hangup--;
     }
+	*/
 
     //Keypad stuff
     uint8_t pressed_key = keypad_scan();
     if(pressed_key < 0xA)
-        uart_putc('0'+pressed_key);
+        usb_putc('0'+pressed_key);
     else
-        uart_putc('0'-0xA+pressed_key);
-    _delay_us(255);
+        usb_putc('0'-0xA+pressed_key);
+
+	//USB stuff
+	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+	USB_USBTask();
+
+    //_delay_us(255);
+}
+
+void EVENT_USB_Device_ConfigurationChanged(void)
+{
+    CDC_Device_ConfigureEndpoints(&VirtualSerial_CDC_Interface);
+}
+
+void EVENT_USB_Device_ControlRequest(void)
+{
+    CDC_Device_ProcessControlRequest(&VirtualSerial_CDC_Interface);
 }

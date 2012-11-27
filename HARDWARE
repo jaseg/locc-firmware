@@ -21,6 +21,10 @@ FIXME pictures of the actual construction, especially the arduino shield
 == How to build (the electronics)
 The telephone and LED interfaces are pretty straight-forward. For the switches: Just connect one side to ground, the other side to any pin (configurable per software, best is you just look it up in the sources). Handle the LED likewise, though here you must care for the polarity and you will need a series resistor (I suggest 330 ohms).
 The GND pin of the cylinder is directly connected to ground. The data pin is directly connected to a pin of the arduino, which one you can configure. The VCC pin is connected to VCC via the transistor side of a photocoupler. The LED side is connected to an arduino pin via a series resistor. The VCC of the cylinder is buffered with a 10.000µF (yeah, thats ten thousand) against ground. This cap really needs to be that big. I tried it, and with pretty much anything less the lock would pull its own VCC down enough to drive the internal µC into brown-out). A schematic of the relevant parts is in "schematics.gif", ***including the TSE cylinder's pinout***.
+-- Cylinder Pin assignment
+ * Orange -- Ground
+ * Red -- VCC
+ * Brown -- Data
 
 == Any questions?
 e-mail or jabber to jaseg@c-base.org
