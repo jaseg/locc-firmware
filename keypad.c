@@ -19,17 +19,19 @@
 #include <avr/io.h>
 #include "keypad.h"
 
+uint8_t matrix_selector = 0x10; //due to the position of the matrix row outputs on the shift register
+
 void keypad_setup(){
-    KEYPAD_ROWS_DDR |= 0xF<<KEYPAD_ROWS_FIRST_PIN;
+	//enable internal pullups for the column inputs
     KEYPAD_COLS_PORT |= 0xF<<KEYPAD_COLS_FIRST_PIN;
 }
 
-//FIXME debouncing
+//FIXME test debouncing
+//CAUTION! This function relies on the caller to apply matrix_selector before the next call
 uint8_t keypad_scan(){
     static uint8_t row = 0;
     static uint8_t debouncing[4][4];
-    KEYPAD_ROWS_PORT |= (1<<KEYPAD_ROWS_FIRST_PIN)<<row;
-    uint8_t row_state = KEYPAD_COLS_INPUT>>KEYPAD_COLS_FIRST_PIN;
+    uint8_t row_state = ~(KEYPAD_COLS_INPUT>>KEYPAD_COLS_FIRST_PIN);
     uint8_t ret = 0;
     //FIXME due to a lack of information about the keypad, this does not yet include the decoding logic mapping these arbitrary numbers to pressed keys
     //TODO check whether *that* debouncing actually works
@@ -38,7 +40,7 @@ uint8_t keypad_scan(){
         if(debouncing[row][i] <= 1){
             if(row_state & (1<<i)){
                 if(debouncing[row][i] == 0){
-                    ret = 0;
+                    ret = i;
                     debouncing[row][i] = 0x40;
                 }
             }else{
@@ -48,7 +50,14 @@ uint8_t keypad_scan(){
             debouncing[row][i]--;
         }
     }
-    ret |= row<<2;
-    row++;
-    row&=0xFC; //modulo 4
+    ret += row*4;
+
+	matrix_selector <<= 1;
+	row++;
+	if(!matrix_selector){
+		matrix_selector = 0x10;
+		row = 0;
+	}
+
+	return ret;
 }

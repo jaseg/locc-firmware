@@ -21,13 +21,11 @@
 
 #include <avr/io.h>
 
-//FIXME these values are just examples
-#define KEYPAD_ROWS_DDR         DDRD
-#define KEYPAD_ROWS_PORT        PORTD
-#define KEYPAD_ROWS_FIRST_PIN   0
 #define KEYPAD_COLS_INPUT       PIND
 #define KEYPAD_COLS_PORT        PORTD
-#define KEYPAD_COLS_FIRST_PIN   4
+#define KEYPAD_COLS_FIRST_PIN   0
+
+extern uint8_t matrix_selector;
 
 void keypad_setup(void);
 //Called to scan the next row of the keypad. Returns the highest pressed digit (0x00-0x09), with A-D being mapped to 0xA-0xD

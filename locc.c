@@ -84,6 +84,7 @@ void loccSetup(void)
 
 	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
 	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
+	CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN);
 
 	//GRNLED_DDR |= (1 << GRNLED_PIN);		/* Setup green LED */
 	//GRNLED_PORT &= ~(1 << GRNLED_PIN);

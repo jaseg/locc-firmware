@@ -24,15 +24,17 @@
 #include <util/delay.h>
 
 #include "Descriptors.h"
-#include <LUFA/Version.h>
-#include <LUFA/Drivers/USB/USB.h>
-#include <LUFA/Drivers/USB/Class/CDCClass.h>
+#include "srsly/USB.h"
+#include "srsly/CDCClass.h"
 
 #include "locc.h"
+#include "dial.h"
 #include "keypad.h"
 
 void setup(void);
 void loop(void);
+void set_led(uint8_t num, uint8_t val);
+void shiftreg_out(void);
 void usb_putc(char c);
 void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
@@ -63,28 +65,26 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
             },
     };
 
-void usb_putc(char c){
-    //CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
-}
-
 int main(void){
     setup();
     for(;;) loop();
 }
 
 void setup(){
-    //Disable watchdog if enabled by bootloader/fuses FIXME is the actually necessary? I ctrlc-ctrlv'ed this from the lufa sources
+    //Disable watchdog if enabled by fuses
     MCUSR &= ~(1 << WDRF);
     wdt_disable();
 
-    //output setup
-	//DDRC |= 0x07;
-    //PD2 hangup
-    //PD3 impulse
-    //PD4 dialing
-    //PORTD |= 0x1C;
-    //DDRB |= 0x20; //??? FIXME
-	
+    //setup spi
+	//SS,MOSI,SCK
+	DDRB |= 0x07;
+	PORTB |= 0x01;
+	//RCLK
+	DDRD |= 0x10;
+	PORTD |= 0x10;
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<CPOL) | (1<<CPHA); //spi data rate: f_clk/16 = 1MHz (it's only a few millimeters)
+
+	dial_setup();
     loccSetup();
     keypad_setup();
 	clock_prescale_set(clock_div_1);
@@ -92,59 +92,33 @@ void setup(){
     sei();
 }
 
-int parseHex(char* buf){
-    int result = 0;
-    int len = 2;
-    for(int i=0; i<len; i++){
-        char c = buf[len-i];
-        int v = 0;
-        if(c>='0' && c<='9'){
-            v=(c-'0');
-        }else if(c>='a' && c<= 'f'){
-            v=(c-'a'+10);
-        }else if(c>='A' && c<= 'F'){
-            v=(c-'A'+10);
-        }
-        result |= v<<(4*i);
-    }
-    return result;
+uint8_t led_states = 0x00;
+
+//0<=num<3; val=0 => off val>0 => on
+void set_led(uint8_t num, uint8_t val){
+	if(num<3){
+		led_states &= ~(1<<num);
+		led_states |= (!val)<<num;
+	}
 }
 
-uint8_t protocol_state = 0;
-uint8_t cmd_target = 0;
-
-void set_led(uint8_t num, uint8_t val){
-    switch(num){
-        case '0':
-            if(val)
-                PORTB |= 0x20;
-            else
-                PORTB &= 0xDF;
-            break;
-        case '1':
-            if(val)
-                PORTC |= 0x01;
-            else
-                PORTC &= 0xFE;
-            break;
-        case '2':
-            if(val)
-                PORTC |= 0x02;
-            else
-                PORTC &= 0xFD;
-            break;
-        case '3':
-            if(val)
-                PORTC |= 0x04;
-            else
-                PORTC &= 0xFB;
-            break;
-    }
+void shiftreg_out(){
+	//CAUTION!! This does *not* wait until the byte has been transmitted, thus it must only be called every so-and-so microseconds.
+	SPDR = led_states; //led_states | matrix_selector;
+	while(!(SPSR&(1<<SPIF))){
+		//She waves and opens a door back onto the piazza where her robot cat -- the alien's nightmare intruder in the DMZ -- sleeps, chasing superintelligent dream mice through multidimensional realities. 
+	}
+	led_states ^= 0x07;
+	PORTD &= ~0x10;
+	PORTD |= 0x10;
 }
 
 void loop(){ //one frame
-    int receive_status = -1;
-    do{ //Always empty the receive buffer since there are _delay_xxs in the following code and thus this might not run all that often.
+	static uint8_t protocol_state = 0;
+	static uint8_t cmd_target = 0;
+	int receive_status = -1;
+
+    do{ //Empty the receive buffer
         receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
         char c = receive_status&0xFF;
 		
@@ -190,62 +164,6 @@ void loop(){ //one frame
 
     }while(receive_status >= 0);
 
-	/*
-    //Rotary phone stuff
-    static uint8_t dial_counter = 0;
-    static uint8_t state_impulse = 0;
-    if(state_impulse <= 1){
-        if(PIND & 0x08){
-            if(state_impulse == 0){
-                state_impulse = 0x40;
-                dial_counter++;
-            }
-        }else{
-            state_impulse = 0;
-        }
-    }else{
-        state_impulse--;
-    }
-    static uint8_t state_dialing = 0;
-    if(state_dialing <= 1){
-        if(PIND & 0x10){
-            if(state_dialing == 0){
-                state_dialing = 0x80;
-                if(dial_counter >= 10){
-                    dial_counter = 0;
-                }
-                usb_putc('0'+dial_counter);
-                dial_counter = 0;
-                usb_putc('\n');
-            }
-        }else{
-            state_dialing = 0;
-        }
-    }else{
-        state_dialing--;
-    }
-    static uint8_t state_hangup = 0;
-    if(state_hangup <= 2){
-        if(PIND & 0x04){
-            if(state_hangup == 0){
-                state_hangup = 0xFF;
-                usb_putc('h');
-                usb_putc('\n');
-            }
-            state_hangup = 1;
-        }else{
-            if(state_hangup == 1){
-                state_hangup = 0xFF;
-                usb_putc('i');
-                usb_putc('\n');
-            }
-            state_hangup = 0;
-        }
-    }else{
-        state_hangup--;
-    }
-	*/
-
     //Keypad stuff
     uint8_t pressed_key = keypad_scan();
     if(pressed_key < 0xA)
@@ -253,11 +171,32 @@ void loop(){ //one frame
     else
         usb_putc('0'-0xA+pressed_key);
 
+	//rotary dial stuff
+	char d = dial_scan();
+	if(d == -2){
+		usb_putc('h');
+		usb_putc('\n');
+	}else if(d == -3){
+		usb_putc('i');
+		usb_putc('\n');
+	}else if(d >= 0){
+		usb_putc('0'+d);
+		usb_putc('\n');
+	}
+
+	//output led and matrix driver signals via shift register
+	//CAUTION! This must not be called more often than every like 8 microseconds.
+	shiftreg_out();
+
 	//USB stuff
 	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
 	USB_USBTask();
 
     //_delay_us(255);
+}
+
+void usb_putc(char c){
+	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
 }
 
 void EVENT_USB_Device_ConfigurationChanged(void)
