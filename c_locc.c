@@ -22,6 +22,8 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 #include <util/delay.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "Descriptors.h"
 #include "srsly/USB.h"
@@ -70,6 +72,8 @@ int main(void){
     for(;;) loop();
 }
 
+static FILE USBSerialStream;
+
 void setup(){
     //Disable watchdog if enabled by fuses
     MCUSR &= ~(1 << WDRF);
@@ -88,6 +92,7 @@ void setup(){
     loccSetup();
     keypad_setup();
 	clock_prescale_set(clock_div_1);
+	CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
     USB_Init();
     sei();
 }
@@ -105,10 +110,10 @@ void set_led(uint8_t num, uint8_t val){
 void shiftreg_out(){
 	//CAUTION!! This does *not* wait until the byte has been transmitted, thus it must only be called every so-and-so microseconds.
 	SPDR = led_states; //led_states | matrix_selector;
-	while(!(SPSR&(1<<SPIF))){
+	//while(!(SPSR&(1<<SPIF))){
 		//She waves and opens a door back onto the piazza where her robot cat -- the alien's nightmare intruder in the DMZ -- sleeps, chasing superintelligent dream mice through multidimensional realities. 
-	}
-	led_states ^= 0x07;
+	//}
+	//toggle stc
 	PORTD &= ~0x10;
 	PORTD |= 0x10;
 }
@@ -116,11 +121,12 @@ void shiftreg_out(){
 void loop(){ //one frame
 	static uint8_t protocol_state = 0;
 	static uint8_t cmd_target = 0;
-	int receive_status = -1;
+	int16_t rb = -1;
 
-    do{ //Empty the receive buffer
-        receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-        char c = receive_status&0xFF;
+	//CDC_Device_Flush(&VirtualSerial_CDC_Interface);
+	//fputs("FooBar\n", &USBSerialStream);
+    //do{ //Empty the receive buffer
+        rb = fgetc(&USBSerialStream);//CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
 		
         /* Command set:
          * [command]\n
@@ -128,8 +134,11 @@ void loop(){ //one frame
          * o - open lock
          * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
          */
-        if(receive_status >= 0){
-			CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+        if(rb != EOF){
+			char c = rb;
+			//CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+			//fputc(c, &USBSerialStream);
+			fputs("Foobar\n", &USBSerialStream);
 				  
 			switch(protocol_state){
 				case 0:
@@ -156,37 +165,60 @@ void loop(){ //one frame
 					protocol_state = 3;
 					break;
 				case 3:
-					set_led(cmd_target, c-'0');
+					set_led(cmd_target-'0', c-'0');
 					protocol_state = 0;
 					break;
 			}
         }
 
-    }while(receive_status >= 0);
+    //}while(rb >= 0);
 
     //Keypad stuff
-    uint8_t pressed_key = keypad_scan();
-    if(pressed_key < 0xA)
-        usb_putc('0'+pressed_key);
-    else
-        usb_putc('0'-0xA+pressed_key);
-
-	//rotary dial stuff
-	char d = dial_scan();
-	if(d == -2){
-		usb_putc('h');
-		usb_putc('\n');
-	}else if(d == -3){
-		usb_putc('i');
-		usb_putc('\n');
-	}else if(d >= 0){
-		usb_putc('0'+d);
+	/*
+	uint8_t pressed_key = keypad_scan();
+	if(pressed_key != 0xFF){
+		if(pressed_key < 0xA){
+			usb_putc('0'+pressed_key);
+		}else{
+			usb_putc('0'-0xA+pressed_key);
+		}
 		usb_putc('\n');
 	}
+	*/
 
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
 	shiftreg_out();
+
+	//rotary dial stuff
+	uint8_t d = dial_scan();
+	if(d & 0x40){
+		//usb_putc('i');
+		//usb_putc('\n');
+	}else if(d & 0x80){
+		//usb_putc('h');
+		//usb_putc('\n');
+	}else if(!(d & 0x10)){
+		if(d&0xF < 10){
+			//usb_putc('0'+d&0xF);
+			//usb_putc('\n');
+		}
+	}
+	/* FIXME debug code
+	if(IMPULSE_INPUT & (1<<IMPULSE_PIN))
+		usb_putc('I');
+	else
+		usb_putc('i');
+	if(HANGUP_INPUT & (1<<HANGUP_PIN))
+		usb_putc('H');
+	else
+		usb_putc('h');
+	if(DIAL_INPUT & (1<<DIAL_PIN))
+		usb_putc('D');
+	else
+		usb_putc('d');
+	usb_putc('\n');
+	*/
 
 	//USB stuff
 	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);

@@ -32,6 +32,6 @@
 #define DIAL_PIN		4
 
 void dial_setup(void);
-char dial_scan(void);
+uint8_t dial_scan(void);
 
 #endif//__DIAL_H__

@@ -25,11 +25,11 @@ void dial_setup(){
 	HANGUP_PORT |= (1<<HANGUP_PIN);
 }
 
-char dial_scan(){
+uint8_t dial_scan(){
 	static uint8_t dial_counter = 0;
 	static uint8_t state_impulse = 0;
 
-	int8_t rv = -1;
+	uint8_t rv = 0x10;
 
 	if(state_impulse <= 1){
 		if(IMPULSE_INPUT & (1<<IMPULSE_PIN)){
@@ -45,7 +45,7 @@ char dial_scan(){
 	}
 	static uint8_t state_dialing = 0;
 	if(state_dialing <= 1){
-		if(DIAL_INPUT & (1<<DIAL_PIN)){
+		if(!(DIAL_INPUT & (1<<DIAL_PIN))){
 			if(state_dialing == 0){
 				state_dialing = 0x80;
 				if(dial_counter >= 10){
@@ -65,13 +65,13 @@ char dial_scan(){
 		if(HANGUP_INPUT & (1<<HANGUP_PIN)){
 			if(state_hangup == 0){
 				state_hangup = 0xFF;
-				rv = -2;
+				rv |= 0x80;
 			}
 			state_hangup = 1;
 		}else{
 			if(state_hangup == 1){
 				state_hangup = 0xFF;
-				rv = -3;
+				rv |= 0x40;
 			}
 			state_hangup = 0;
 		}
@@ -81,5 +81,4 @@ char dial_scan(){
 	
 	return rv;
 }
-
 

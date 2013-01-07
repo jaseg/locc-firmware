@@ -32,7 +32,7 @@ uint8_t keypad_scan(){
     static uint8_t row = 0;
     static uint8_t debouncing[4][4];
     uint8_t row_state = ~(KEYPAD_COLS_INPUT>>KEYPAD_COLS_FIRST_PIN);
-    uint8_t ret = 0;
+    uint8_t ret = 0xFF;
     //FIXME due to a lack of information about the keypad, this does not yet include the decoding logic mapping these arbitrary numbers to pressed keys
     //TODO check whether *that* debouncing actually works
     //TODO currently, this only handles key presses, key releases are ignored
@@ -50,7 +50,8 @@ uint8_t keypad_scan(){
             debouncing[row][i]--;
         }
     }
-    ret += row*4;
+	if(ret != 0xFF)
+		ret += row*4;
 
 	matrix_selector <<= 1;
 	row++;
