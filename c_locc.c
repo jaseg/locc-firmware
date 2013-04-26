@@ -24,21 +24,40 @@
 #include <util/delay.h>
 
 #include "Descriptors.h"
-#include "srsly/USB.h"
-#include "srsly/CDCClass.h"
 
+#include "c_locc.h"
 #include "locc.h"
 #include "dial.h"
 #include "keypad.h"
+
+#include <LUFA/Drivers/Misc/RingBuffer.h>
+#include <LUFA/Drivers/USB/USB.h>
+#include <LUFA/Drivers/Peripheral/Serial.h>
+
 
 void setup(void);
 void loop(void);
 void set_led(uint8_t num, uint8_t val);
 void shiftreg_out(void);
 void usb_putc(char c);
-void EVENT_USB_Device_ConfigurationChanged(void);
-void EVENT_USB_Device_ControlRequest(void);
 
+/** Circular buffer to hold data from the host before it is sent to the device via the serial port. */
+static RingBuffer_t USBtoUSART_Buffer;
+
+/** Underlying data buffer for \ref USBtoUSART_Buffer, where the stored bytes are located. */
+static uint8_t      USBtoUSART_Buffer_Data[128];
+
+/** Circular buffer to hold data from the serial port before it is sent to the host. */
+static RingBuffer_t USARTtoUSB_Buffer;
+
+/** Underlying data buffer for \ref USARTtoUSB_Buffer, where the stored bytes are located. */
+static uint8_t      USARTtoUSB_Buffer_Data[128];
+
+
+/** LUFA CDC Class driver interface configuration and state information. This structure is
+ *  passed to all CDC Class driver functions, so that multiple instances of the same class
+ *  within a device can be differentiated from one another.
+ */
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
     {
         .Config =
@@ -88,7 +107,11 @@ void setup(){
     loccSetup();
     keypad_setup();
 	clock_prescale_set(clock_div_1);
+
     USB_Init();
+    RingBuffer_InitBuffer(&USBtoUSART_Buffer, USBtoUSART_Buffer_Data, sizeof(USBtoUSART_Buffer_Data));
+    RingBuffer_InitBuffer(&USARTtoUSB_Buffer, USARTtoUSB_Buffer_Data, sizeof(USARTtoUSB_Buffer_Data));
+
     sei();
 }
 
@@ -208,3 +231,64 @@ void EVENT_USB_Device_ControlRequest(void)
 {
     CDC_Device_ProcessControlRequest(&VirtualSerial_CDC_Interface);
 }
+
+
+/** Event handler for the CDC Class driver Line Encoding Changed event.
+ *
+ *  \param[in] CDCInterfaceInfo  Pointer to the CDC class interface configuration structure being referenced
+ */
+void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+{
+    uint8_t ConfigMask = 0;
+
+    switch (CDCInterfaceInfo->State.LineEncoding.ParityType)
+    {
+        case CDC_PARITY_Odd:
+            ConfigMask = ((1 << UPM11) | (1 << UPM10));
+            break;
+        case CDC_PARITY_Even:
+            ConfigMask = (1 << UPM11);
+            break;
+    }
+
+    if (CDCInterfaceInfo->State.LineEncoding.CharFormat == CDC_LINEENCODING_TwoStopBits)
+      ConfigMask |= (1 << USBS1);
+
+    switch (CDCInterfaceInfo->State.LineEncoding.DataBits)
+    {
+        case 6:
+            ConfigMask |= (1 << UCSZ10);
+            break;
+        case 7:
+            ConfigMask |= (1 << UCSZ11);
+            break;
+        case 8:
+            ConfigMask |= ((1 << UCSZ11) | (1 << UCSZ10));
+            break;
+    }
+
+    /* Must turn off USART before reconfiguring it, otherwise incorrect operation may occur */
+    UCSR1B = 0;
+    UCSR1A = 0;
+    UCSR1C = 0;
+
+    /* Set the new baud rate before configuring the USART */
+    UBRR1  = SERIAL_2X_UBBRVAL(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
+
+    /* Reconfigure the USART in double speed mode for a wider baud rate range at the expense of accuracy */ 
+    UCSR1C = ConfigMask; 
+    UCSR1A = (1 << U2X1); 
+    UCSR1B = ((1 << RXCIE1) | (1 << TXEN1) | (1 << RXEN1)); 
+} 
+ 
+/** Event handler for the library USB Connection event. */
+void EVENT_USB_Device_Connect(void)
+{
+}
+
+/** Event handler for the library USB Disconnection event. */
+void EVENT_USB_Device_Disconnect(void)
+{
+}
+
+
