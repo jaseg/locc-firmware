@@ -42,16 +42,16 @@ void shiftreg_out(void);
 void usb_putc(char c);
 
 /** Circular buffer to hold data from the host before it is sent to the device via the serial port. */
-static RingBuffer_t USBtoUSART_Buffer;
+static RingBuffer_t USB_input_Buffer;
 
-/** Underlying data buffer for \ref USBtoUSART_Buffer, where the stored bytes are located. */
-static uint8_t      USBtoUSART_Buffer_Data[128];
+/** Underlying data buffer for \ref USB_input_Buffer, where the stored bytes are located. */
+static uint8_t      USB_input_Buffer_Data[128];
 
 /** Circular buffer to hold data from the serial port before it is sent to the host. */
-static RingBuffer_t USARTtoUSB_Buffer;
+static RingBuffer_t USB_output_Buffer;
 
-/** Underlying data buffer for \ref USARTtoUSB_Buffer, where the stored bytes are located. */
-static uint8_t      USARTtoUSB_Buffer_Data[128];
+/** Underlying data buffer for \ref USB_output_Buffer, where the stored bytes are located. */
+static uint8_t      USB_output_Buffer_Data[128];
 
 
 /** LUFA CDC Class driver interface configuration and state information. This structure is
@@ -109,8 +109,8 @@ void setup(){
 	clock_prescale_set(clock_div_1);
 
     USB_Init();
-    RingBuffer_InitBuffer(&USBtoUSART_Buffer, USBtoUSART_Buffer_Data, sizeof(USBtoUSART_Buffer_Data));
-    RingBuffer_InitBuffer(&USARTtoUSB_Buffer, USARTtoUSB_Buffer_Data, sizeof(USARTtoUSB_Buffer_Data));
+    RingBuffer_InitBuffer(&USB_input_Buffer, USB_input_Buffer_Data, sizeof(USB_input_Buffer_Data));
+    RingBuffer_InitBuffer(&USB_output_Buffer, USB_output_Buffer_Data, sizeof(USB_output_Buffer_Data));
 
     sei();
 }
@@ -139,54 +139,51 @@ void shiftreg_out(){
 void loop(){ //one frame
 	static uint8_t protocol_state = 0;
 	static uint8_t cmd_target = 0;
-	int receive_status = -1;
+	int16_t receive_status = -1;
 
-    do{ //Empty the receive buffer
-        receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-        char c = receive_status&0xFF;
-		
-        /* Command set:
-         * [command]\n
-         * Commands:
-         * o - open lock
-         * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
-         */
-        if(receive_status >= 0){
-			CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
-				  
-			switch(protocol_state){
-				case 0:
-					if(c == '\n')
-						protocol_state = 1;
-					break;
-				case 1:
-					switch(c){
-						case 'o':
-							loccOpen();
-							protocol_state = 0;
-							break;
-						case 'l':
-							protocol_state = 2;
-							break;
-						case '\n':
-							break;
-						default:
-							protocol_state = 0;
-					}
-					break;
-				case 2:
-					cmd_target = c;
-					protocol_state = 3;
-					break;
-				case 3:
-					set_led(cmd_target, c-'0');
-					protocol_state = 0;
-					break;
-			}
+    receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+    Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
+    char c = receive_status&0xFF;
+
+    /* Command set:
+     * [command]\n
+     * Commands:
+     * o - open lock
+     * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
+     */
+    if(!(receive_status < 0)){
+        CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+
+        switch(protocol_state){
+            case 0:
+                if(c == '\n')
+                    protocol_state = 1;
+                break;
+            case 1:
+                switch(c){
+                    case 'o':
+                        loccOpen();
+                        protocol_state = 0;
+                        break;
+                    case 'l':
+                        protocol_state = 2;
+                        break;
+                    case '\n':
+                        break;
+                    default:
+                        protocol_state = 0;
+                }
+                break;
+            case 2:
+                cmd_target = c;
+                protocol_state = 3;
+                break;
+            case 3:
+                set_led(cmd_target, c-'0');
+                protocol_state = 0;
+                break;
         }
-
-    }while(receive_status >= 0);
-
+    }
     //Keypad stuff
     uint8_t pressed_key = keypad_scan();
     if(pressed_key < 0xA)
@@ -209,6 +206,7 @@ void loop(){ //one frame
 
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
+    _delay_us(8);
 	shiftreg_out();
 
 	//USB stuff
