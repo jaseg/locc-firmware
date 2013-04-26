@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2012.
+     Copyright (C) Dean Camera, 2013.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2013  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -55,7 +55,7 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 	.Endpoint0Size          = FIXED_CONTROL_ENDPOINT_SIZE,
 
 	.VendorID               = 0x03EB,
-	.ProductID              = 0x2044,
+	.ProductID              = 0x204B,
 	.ReleaseNumber          = VERSION_BCD(00.01),
 
 	.ManufacturerStrIndex   = 0x01,
@@ -192,9 +192,9 @@ const USB_Descriptor_String_t PROGMEM LanguageString =
  */
 const USB_Descriptor_String_t PROGMEM ManufacturerString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(10), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(12), .Type = DTYPE_String},
 
-	.UnicodeString          = L"s@jaseg.de"
+	.UnicodeString          = L"lynxis/jaseg"
 };
 
 /** Product descriptor string. This is a Unicode string containing the product's details in human readable form,
@@ -203,9 +203,9 @@ const USB_Descriptor_String_t PROGMEM ManufacturerString =
  */
 const USB_Descriptor_String_t PROGMEM ProductString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(12), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(17), .Type = DTYPE_String},
 
-	.UnicodeString          = L"c-locc v0.23"
+	.UnicodeString          = L"c-lab locc system"
 };
 
 /** This function is called by the library when in device mode, and must be overridden (see library "USB Descriptors"
