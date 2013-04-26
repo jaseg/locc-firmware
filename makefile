@@ -29,3 +29,5 @@ include $(LUFA_PATH)/Build/lufa_atprogram.mk
 program:
 	dfu-programmer $(MCU) erase
 	dfu-programmer $(MCU) flash $(TARGET).hex
+flash:
+	avrdude -c avrispmkII -P usb -p m8u2 -v -U flash:w:$(TARGET).hex
