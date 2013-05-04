@@ -3,5 +3,5 @@
 // setup pin + led
 void loccSetup(void);
 // open locc
-void loccOpen(void);
+void loccStartOpening(void);
 #endif//__LOCC_H__

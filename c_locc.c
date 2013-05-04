@@ -162,7 +162,7 @@ void loop(){ //one frame
             case 1:
                 switch(c){
                     case 'o':
-                        loccOpen();
+                        loccStartOpening();
                         protocol_state = 0;
                         break;
                     case 'l':
