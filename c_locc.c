@@ -108,7 +108,6 @@ void setup(){
 	//dial_setup();
     loccSetup();
     //keypad_setup();
-    loccPoll();
 	clock_prescale_set(clock_div_1);
 
     USB_Init();
@@ -174,7 +173,7 @@ void loop() { //one frame
                         break;
                     case 'g':
                         usb_putc('G');
-                        loccPoll();
+                        loccTicks();
                     case '\n':
                         usb_putc(' ');
                         break;
@@ -195,6 +194,7 @@ void loop() { //one frame
 
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
+    loccPoll();
     _delay_us(8);
 	shiftreg_out();
 

@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "locc.h"
 #include "c_locc.h"
 
@@ -75,6 +76,7 @@ int wakeupTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
 int openTelegram[] =   {0x02, 0x23, 0x42, 0xb7, 0x00, 0x00, 0x63, 0x00};
 
 enum locc_states { SLEEP, POWERUP, AWAKEN, OPEN, POWERDOWN };
+static FILE mystdout = FDEV_SETUP_STREAM( usb_putc, NULL, _FDEV_SETUP_WRITE );
 
 /* mainloop call void tick(void) which is a proxy to this method
  * state_tick will be set by the state_machine
@@ -130,6 +132,8 @@ void loccSetup(void)
     TIMSK0 |= 1 << TOIE0;
     TCCR0B = 0x03;
     TCNT0 = 0x06;
+
+    stdout = &mystdout;
 }
 
 /* Call this to start an opening process */
@@ -251,9 +255,7 @@ void loccPoll(void) {
 volatile int test_ticks = 0;
 
 void loccTicks(void) {
-    usb_putc(TCNT0);
-    usb_putc('\r');
-    usb_putc('\n');
+    printf("put %d\n", TCNT0);
 }
 
 /* proxy method to state_tick */

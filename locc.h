@@ -6,4 +6,6 @@ void loccSetup(void);
 void loccStartOpening(void);
 // you have to call poll within your main loo
 void loccPoll(void);
+
+void loccTicks(void);
 #endif//__LOCC_H__
