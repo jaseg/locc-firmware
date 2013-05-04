@@ -128,14 +128,14 @@ void loccSetup(void)
 
     // Timer0 with prescaler 64 by 16mhz => 1msec
     TIMSK0 |= 1 << TOIE0;
-    TCCR0A = 0x03;
+    TCCR0B = 0x03;
     TCNT0 = 0x06;
 }
 
 /* Call this to start an opening process */
 void loccStartOpening(void) {
-    usb_putc('O');
     if(state == SLEEP) {
+        usb_putc('|');
         state_machine(POWERUP);
     }
 }
@@ -209,38 +209,57 @@ static void sendCylinderTelegram(int *telegram, int length)
 	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);				/* Switch internal pullup resistor on */
 }
 
-
 static void state_machine(enum locc_states new_state) {
+    state = new_state;
     switch(new_state) {
         case SLEEP:
+            usb_putc('[');
+            wait_ticks = 0;
             break;
         case POWERUP:
+            usb_putc(']');
             powerup_locc();
+            wait_ticks = 2;
             break;
         case AWAKEN:
+            usb_putc('{');
             wakeup_locc();
             // we have to wait 59ms
             wait_ticks = 59;
             break;
         case OPEN:
+            usb_putc('}');
             open_locc();
             wait_ticks = 59;
             break;
         // the lock will automatic close the opener
         case POWERDOWN:
+            usb_putc('"');
             powerdown_locc();
+            wait_ticks = 2;
             break;
     }
+}
+
+/* doing state_machine stuff to handle code outside of ISR */
+void loccPoll(void) {
+    if((state != SLEEP) &&  (wait_ticks == 0)) {
+        state_machine(++state);
+    }
+}
+
+volatile int test_ticks = 0;
+
+void loccTicks(void) {
+    usb_putc(TCNT0);
+    usb_putc('\r');
+    usb_putc('\n');
 }
 
 /* proxy method to state_tick */
 ISR(TIMER0_OVF_vect) {
     TCNT0 = 0x06;
-    if(state != SLEEP) {
-        if (wait_ticks == 0) {
-            state_machine(++state);
-        } else {
+    if((state != SLEEP) &&  (wait_ticks > 0)) {
             wait_ticks--;
-        }
     }
 }

@@ -54,6 +54,8 @@ static RingBuffer_t USB_output_Buffer;
 static uint8_t      USB_output_Buffer_Data[128];
 
 
+enum protocol_state { WAIT_FOR_NEWLINE, WAIT_FOR_CMD_CHAR, WAIT_FOR_LED_NUMBER, WAIT_FOR_LED_VALUE };
+
 /** LUFA CDC Class driver interface configuration and state information. This structure is
  *  passed to all CDC Class driver functions, so that multiple instances of the same class
  *  within a device can be differentiated from one another.
@@ -103,9 +105,10 @@ void setup(){
 	PORTD |= 0x10;
 	SPCR = (1<<SPE) | (1<<MSTR) | (1<<CPOL) | (1<<CPHA); //spi data rate: f_clk/16 = 1MHz (it's only a few millimeters)
 
-	dial_setup();
+	//dial_setup();
     loccSetup();
-    keypad_setup();
+    //keypad_setup();
+    loccPoll();
 	clock_prescale_set(clock_div_1);
 
     USB_Init();
@@ -136,14 +139,14 @@ void shiftreg_out(){
 	PORTD |= 0x10;
 }
 
-void loop(){ //one frame
-	static volatile uint8_t protocol_state = 0;
+void loop() { //one frame
+	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
 	static uint8_t cmd_target = 0;
 	int16_t receive_status = -1;
 
     receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
-    char c = receive_status&0xFF;
+    char c = (receive_status & 0xFF);
 
     /* Command set:
      * [command]\n
@@ -154,37 +157,38 @@ void loop(){ //one frame
     if(!(receive_status < 0)){
         CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
 
-        switch(protocol_state){
-            case 0:
-                if(c == '\n')
-                    protocol_state = 1;
-                    usb_putc('0');
+        switch(p_state){
+            case WAIT_FOR_NEWLINE:
+                if(c == '\n' || c == '\r')
+                    p_state = WAIT_FOR_CMD_CHAR;
                 break;
-            case 1:
-                switch(c){
+            case WAIT_FOR_CMD_CHAR:
+                switch(c) {
                     case 'o':
-                        usb_putc('1');
                         loccStartOpening();
-                        protocol_state = 0;
+                        p_state = WAIT_FOR_NEWLINE;
                         break;
                     case 'l':
-                        usb_putc('2');
-                        protocol_state = 2;
+                        usb_putc('L');
+                        p_state = WAIT_FOR_LED_NUMBER;
                         break;
+                    case 'g':
+                        usb_putc('G');
+                        loccPoll();
                     case '\n':
-                        usb_putc('3');
+                        usb_putc(' ');
                         break;
                     default:
-                        protocol_state = 0;
+                        p_state = WAIT_FOR_NEWLINE;
                 }
                 break;
-            case 2:
+            case WAIT_FOR_LED_NUMBER:
                 cmd_target = c;
-                protocol_state = 3;
+                p_state = WAIT_FOR_LED_VALUE;
                 break;
-            case 3:
+            case WAIT_FOR_LED_VALUE:
                 set_led(cmd_target, c-'0');
-                protocol_state = 0;
+                p_state = WAIT_FOR_NEWLINE;
                 break;
         }
     }
