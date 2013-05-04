@@ -30,6 +30,7 @@
 #include <util/delay.h>
 #include <stdbool.h>
 #include "locc.h"
+#include "c_locc.h"
 
 /* we are using TIMER0 here ! */
 /* I/O Port configuration */
@@ -133,6 +134,7 @@ void loccSetup(void)
 
 /* Call this to start an opening process */
 void loccStartOpening(void) {
+    usb_putc('O');
     if(state == SLEEP) {
         state_machine(POWERUP);
     }
