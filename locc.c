@@ -81,7 +81,7 @@ static FILE mystdout = FDEV_SETUP_STREAM( usb_putc, NULL, _FDEV_SETUP_WRITE );
 /* mainloop call void tick(void) which is a proxy to this method
  * state_tick will be set by the state_machine
 */
-volatile unsigned int wait_ticks = 0;
+volatile unsigned long wait_ticks = 0;
 volatile enum locc_states state = SLEEP;
 
 /* ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
@@ -213,7 +213,7 @@ static void state_machine(enum locc_states new_state) {
         case POWERUP:
             usb_putc(']');
             powerup_locc();
-            wait_ticks = 2;
+            wait_ticks = 50;
             break;
         case AWAKEN:
             usb_putc('{');
@@ -224,9 +224,10 @@ static void state_machine(enum locc_states new_state) {
         case OPEN:
             usb_putc('}');
             open_locc();
-            wait_ticks = 59;
+            // how long takes the locc to close cylinder?
+            wait_ticks = 10000; /* 10 s */
             break;
-        // the lock will automatic close the opener
+            // the lock will automatic close the opener
         case POWERDOWN:
             usb_putc('"');
             powerdown_locc();
