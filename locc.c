@@ -48,50 +48,22 @@
 #define CYLINDER_VCC_PORT PORTD				/* Port I/O Register of the used port */
 #define CYLINDER_VCC_PIN 6				/* Pin number of the used pin */
 
-/* Green LED */
-#define GRNLED_DDR DDRB					/* Data direction register of the used port */
-#define GRNLED_PORT PORTB				/* Port I/O Register of the used port */
-#define GRNLED_PIN 1					/* Pin number of the used pin */
-#define GRN 1
-
-/* Red LED */
-#define REDLED_DDR DDRB					/* Data direction register of the used port */
-#define REDLED_PORT PORTB				/* Port I/O Register of the used port */
-#define REDLED_PIN 5					/* Pin number of the used pin */
-#define RED 0
-
-/* OPEN SIGNAL */
-#define OPEN_DDR DDRD					/* Data direction register of the used port */
-#define OPEN_PORT PORTD					/* Port I/O Register of the used port */
-#define OPEN_PINR PIND					/* Port I/O Register of the used port */
-#define OPEN_PIN 3					/* Pin number of the used pin */
-
 #define AWAKETIME 59
 #define CYLINDER_TELEGRAM_TIMING_DELAY 50
 
+
 /* Opening datagram */
-/* Note: This is the opening datagram that will be sent to the cylinder this example contains the default
-         code (123456) which is the factory setup */
-int wakeupTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
+int statusTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
 int openTelegram[] =   {0x02, 0x23, 0x42, 0xb7, 0x00, 0x00, 0x63, 0x00};
 
 enum locc_states { SLEEP, POWERUP, AWAKEN, OPEN, POWERDOWN };
-static FILE mystdout = FDEV_SETUP_STREAM( usb_putc, NULL, _FDEV_SETUP_WRITE );
 
-/* mainloop call void tick(void) which is a proxy to this method
- * state_tick will be set by the state_machine
-*/
 volatile unsigned long wait_ticks = 0;
 volatile enum locc_states state = SLEEP;
 
-/* ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
-
-
-/* // IMPLEMENTATION //////////////////////////////////////////////////////////////////////////////////////////////// */
 static void sendCylinderTelegram(int *telegram, int length);
 static void state_machine(enum locc_states new_state);
 
-/* Waste some time */
 void systemDelay10us(uint8_t value)
 {
 	while(value--)
@@ -251,7 +223,6 @@ void loccSetup(void)
     TCNT0 = 0x06;
 
     powerdown_locc();
-    stdout = &mystdout;
 }
 
 /* doing state_machine stuff to handle code outside of ISR */
@@ -261,19 +232,12 @@ void loccPoll(void) {
     }
 }
 
-#ifdef LOCC_DEBUG
-void loccTicks(void) {
-    printf("ticks %d\n", TCNT0);
-}
 void loccPowerDown(void) {
-    printf("power down\n");
     powerdown_locc();
 }
 void loccPowerUp(void) {
-    printf("power uo\n");
     powerup_locc();
 }
-#endif /* LOCC_DEBUG */
 
 /* proxy method to state_tick */
 ISR(TIMER0_OVF_vect) {
