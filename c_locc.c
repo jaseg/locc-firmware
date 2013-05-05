@@ -95,6 +95,9 @@ void setup(){
     //Disable watchdog if enabled by fuses
     MCUSR &= ~(1 << WDRF);
     wdt_disable();
+    
+    // we want to run at 16mhz
+	clock_prescale_set(clock_div_1);
 
     //setup spi
 	//SS,MOSI,SCK
@@ -105,14 +108,13 @@ void setup(){
 	PORTD |= 0x10;
 	SPCR = (1<<SPE) | (1<<MSTR) | (1<<CPOL) | (1<<CPHA); //spi data rate: f_clk/16 = 1MHz (it's only a few millimeters)
 
-	//dial_setup();
-    loccSetup();
-    //keypad_setup();
-	clock_prescale_set(clock_div_1);
-
     USB_Init();
     RingBuffer_InitBuffer(&USB_input_Buffer, USB_input_Buffer_Data, sizeof(USB_input_Buffer_Data));
     RingBuffer_InitBuffer(&USB_output_Buffer, USB_output_Buffer_Data, sizeof(USB_output_Buffer_Data));
+
+	//dial_setup();
+    //loccSetup();
+    //keypad_setup();
 
     sei();
 }
@@ -155,6 +157,8 @@ void loop() { //one frame
      */
     if(!(receive_status < 0)){
         CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+        if(c == '\n' || c == '\r')
+            usb_putc('\n');
 
         switch(p_state){
             case WAIT_FOR_NEWLINE:
@@ -171,7 +175,6 @@ void loop() { //one frame
                         usb_putc('L');
                         p_state = WAIT_FOR_LED_NUMBER;
                         break;
-#ifdef LOCC_DEBUG
                     case 'g':
                         loccTicks();
                         break;
@@ -181,9 +184,8 @@ void loop() { //one frame
                     case 'i':
                         loccPowerUp();
                         break;
-#endif /* LOCC_DEBUG */
                     case '\n':
-                        usb_putc(' ');
+                        usb_putc('\r');
                         break;
                     default:
                         p_state = WAIT_FOR_NEWLINE;
@@ -213,7 +215,7 @@ void loop() { //one frame
     //_delay_us(255);
 }
 
-void usb_putc(char c){
+inline void usb_putc(char c){
 	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
 }
 
