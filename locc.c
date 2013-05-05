@@ -261,11 +261,19 @@ void loccPoll(void) {
     }
 }
 
-volatile int test_ticks = 0;
-
+#ifdef LOCC_DEBUG
 void loccTicks(void) {
-    printf("put %d\n", TCNT0);
+    printf("ticks %d\n", TCNT0);
 }
+void loccPowerDown(void) {
+    printf("power down\n");
+    powerdown_locc();
+}
+void loccPowerUp(void) {
+    printf("power uo\n");
+    powerup_locc();
+}
+#endif /* LOCC_DEBUG */
 
 /* proxy method to state_tick */
 ISR(TIMER0_OVF_vect) {
