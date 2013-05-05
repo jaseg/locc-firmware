@@ -118,24 +118,6 @@ void systemDelay1s(uint8_t value)
 	return;
 }
 
-/* Configure I/O Ports */
-void loccSetup(void)
-{
-	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
-	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
-
-	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
-	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
-	CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN);
-
-    // Timer0 with prescaler 64 by 16mhz => 1msec
-    TIMSK0 |= 1 << TOIE0;
-    TCCR0B = 0x03;
-    TCNT0 = 0x06;
-
-    stdout = &mystdout;
-}
-
 /* Call this to start an opening process */
 void loccStartOpening(void) {
     if(state == SLEEP) {
@@ -251,6 +233,24 @@ static void state_machine(enum locc_states new_state) {
             wait_ticks = 2;
             break;
     }
+}
+
+/* Configure I/O Ports */
+void loccSetup(void)
+{
+	CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN);	/* Setup cylinder I/O */
+	CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN);
+
+	CYLINDER_VCC_DDR |= (1 << CYLINDER_VCC_PIN);		/* Setup cylinder VCC */
+	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
+
+    // Timer0 with prescaler 64 by 16mhz => 1msec
+    TIMSK0 |= 1 << TOIE0;
+    TCCR0B = 0x03;
+    TCNT0 = 0x06;
+
+    powerdown_locc();
+    stdout = &mystdout;
 }
 
 /* doing state_machine stuff to handle code outside of ISR */
