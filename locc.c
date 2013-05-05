@@ -145,10 +145,18 @@ void loccStartOpening(void) {
 }
 
 static void powerdown_locc(void) {
-	CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN);
+    /* don't let leak power over signal line to vcc on cylinder */
+    CYLINDER_IO_DDR  |= (1 << CYLINDER_IO_PIN); /* Set I/O Pin to output (Low impedance) */
+    CYLINDER_IO_PORT &= ~(1 << CYLINDER_IO_PIN);    /* Switch I/O pin to low */
+
+    CYLINDER_VCC_PORT &= ~(1 << CYLINDER_VCC_PIN); 
+
 }
 
 static void powerup_locc(void) {
+    CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN); /* Set I/O Pin to input (High impedance) */
+    CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN); /* Switch internal pullup resistor on */
+
 	CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN);
 }
 
