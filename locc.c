@@ -56,7 +56,7 @@
 int statusTelegram[] =  {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00};
 int openTelegram[] =   {0x02, 0x23, 0x42, 0xb7, 0x00, 0x00, 0x63, 0x00};
 
-enum locc_states { SLEEP, POWERUP, AWAKEN, OPEN, POWERDOWN };
+enum locc_states { SLEEP, POWERUP, AWAKEN, OPEN, POWERDOWN, RESET };
 
 volatile unsigned long wait_ticks = 0;
 volatile enum locc_states state = SLEEP;
@@ -205,6 +205,9 @@ static void state_machine(enum locc_states new_state) {
             powerdown_locc();
             wait_ticks = 2;
             break;
+				case RESET:
+						state_machine(SLEEP);
+						break;
     }
 }
 
