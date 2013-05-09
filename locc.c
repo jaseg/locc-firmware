@@ -213,6 +213,7 @@ static void state_machine(enum locc_states new_state) {
 }
 
 bool do_next_locc_step(void) {
+	
 	if (timer_is_expired()) {
 		usb_putc('^');
 		

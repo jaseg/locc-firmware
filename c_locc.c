@@ -147,6 +147,10 @@ void loop() { //one frame
 	
 	bool is_locking = false;
 
+	if (is_locking) {
+		is_locking = do_next_locc_step();
+	}
+
     receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
     char c = (receive_status & 0xFF);
@@ -157,7 +161,7 @@ void loop() { //one frame
      * o - open lock
      * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
      */
-    if( !(receive_status < 0) && (!is_locking) ){
+    if( (!(receive_status < 0)) && (!is_locking) ){
         CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
         if(c == '\n' || c == '\r')
             usb_putc('\n');
@@ -203,9 +207,6 @@ void loop() { //one frame
         }
     }
 
-	if (is_locking) {
-		is_locking = do_next_locc_step();
-	}
 	
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
