@@ -175,9 +175,6 @@ void loop() { //one frame
                         usb_putc('L');
                         p_state = WAIT_FOR_LED_NUMBER;
                         break;
-                    case 'g':
-                        loccTicks();
-                        break;
                     case 'h':
                         loccPowerDown();
                         break;
