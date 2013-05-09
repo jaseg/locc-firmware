@@ -111,7 +111,6 @@ static void powerup_locc(void) {
     CYLINDER_IO_DDR &= ~(1 << CYLINDER_IO_PIN); /* Set I/O Pin to input (High impedance) */
     CYLINDER_IO_PORT |= (1 << CYLINDER_IO_PIN); /* Switch internal pullup resistor on */
 		CYLINDER_VCC_PORT |= (1 << CYLINDER_VCC_PIN);
-		usb_putc('>');
 }
 
 static void wakeup_locc(void) {
@@ -230,6 +229,7 @@ void loccSetup(void)
 
 /* doing state_machine stuff to handle code outside of ISR */
 void loccPoll(void) {
+		usb_putc('>');
     if((state != SLEEP) &&  (wait_ticks == 0)) {
         state_machine(++state);
     }
