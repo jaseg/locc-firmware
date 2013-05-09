@@ -227,7 +227,7 @@ bool do_next_locc_step(void) {
 	if (current_locc_step > 0) {
 		return true;
 	} else {
-		usb_putc("^")
+		usb_putc("^");
 		return false;
 	}
 	
