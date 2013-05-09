@@ -53,6 +53,7 @@ static RingBuffer_t USB_output_Buffer;
 /** Underlying data buffer for \ref USB_output_Buffer, where the stored bytes are located. */
 static uint8_t      USB_output_Buffer_Data[128];
 
+static bool is_locking = false;
 
 enum protocol_state { WAIT_FOR_NEWLINE, WAIT_FOR_CMD_CHAR, WAIT_FOR_LED_NUMBER, WAIT_FOR_LED_VALUE };
 
@@ -144,8 +145,6 @@ void loop() { //one frame
 	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
 	static uint8_t cmd_target = 0;
 	int16_t receive_status = -1;
-	
-	bool is_locking = false;
 
 	if (is_locking) {
 		is_locking = do_next_locc_step();
