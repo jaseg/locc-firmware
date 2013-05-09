@@ -223,7 +223,7 @@ bool do_next_locc_step(void) {
 		usb_putc('.');
 	}
 	
-	current_locc_step = (current_locc_step + 1) % 4; 
+	current_locc_step = current_locc_step % 4; 
 	
 	if (current_locc_step > 0) {
 		return true;
@@ -239,23 +239,27 @@ static void do_locc_step(int step) {
 			usb_putc('0');
 			powerup_locc();
 			set_wait_time(50);
+			current_locc_step++;
 			break;
 			
 		case 1:
 			usb_putc('1');
 			wakeup_locc();
+			current_locc_step++;
 			set_wait_time(59);
 			break;
 			
 		case 2:
 			usb_putc('2');
 			open_locc();
+			current_locc_step++;
 			set_wait_time(10000);
 			break;
 			
 		case 3:
 			usb_putc('3');
 			powerdown_locc();
+			current_locc_step++;
             set_wait_time(2);
 			break;
 	}
