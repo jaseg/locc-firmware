@@ -218,6 +218,7 @@ bool do_next_locc_step(void) {
 		
 		do_locc_step(current_locc_step);
 		current_locc_step = (current_locc_step + 1) % 4; 
+		
 		if (current_locc_step > 0) {
 			return true;
 		} else {
