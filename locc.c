@@ -241,25 +241,25 @@ static void do_locc_step(int step) {
 	switch(current_locc_step) {
 		case 0:
 			set_wait_time(0);
-			current_locc_step++;
+			current_locc_step = 1;
 			break;
 		case 1:
 			usb_putc('0');
 			powerup_locc();
 			set_wait_time(50);
-			current_locc_step++;
+			current_locc_step = 2;
 			break;
 		case 2:
 			usb_putc('1');
 			wakeup_locc();
-			current_locc_step++;
+			current_locc_step = 3;
 			set_wait_time(59);
 			break;
 			
 		case 4:
 			usb_putc('2');
 			open_locc();
-			current_locc_step++;
+			current_locc_step = 4;
 			set_wait_time(10000);
 			break;
 			

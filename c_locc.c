@@ -166,6 +166,7 @@ void loop() { //one frame
     }
 	if (command == 1) {
 		is_locking = true;
+		start_locking();
 	}
 
 	if (is_locking) {
