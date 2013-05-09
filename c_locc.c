@@ -202,10 +202,11 @@ void loop() { //one frame
         }
     }
 
+	loccPoll();
+	
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
-    loccPoll();
-    _delay_us(8);
+  _delay_us(8);
 	shiftreg_out();
 
 	//USB stuff
