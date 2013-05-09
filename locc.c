@@ -212,6 +212,10 @@ static void state_machine(enum locc_states new_state) {
     }
 }
 
+void start_locking(void) {
+	current_locc_step = 1;
+}
+
 bool do_next_locc_step(void) {
 	
 	if (timer_is_expired()) {

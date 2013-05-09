@@ -18,6 +18,6 @@ static bool timer_is_expired(void);
 
 static void set_wait_time(unsigned long);
 
-
+void start_locking(void);
 
 #endif//__LOCC_H__
