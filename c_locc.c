@@ -146,10 +146,6 @@ void loop() { //one frame
 	static uint8_t cmd_target = 0;
 	int16_t receive_status = -1;
 
-	if (is_locking) {
-		is_locking = do_next_locc_step();
-	}
-
     receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
     char c = (receive_status & 0xFF);
@@ -206,6 +202,9 @@ void loop() { //one frame
         }
     }
 
+	if (is_locking) {
+		is_locking = do_next_locc_step();
+	}
 	
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
