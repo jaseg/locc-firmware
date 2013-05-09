@@ -113,7 +113,7 @@ void setup(){
     RingBuffer_InitBuffer(&USB_output_Buffer, USB_output_Buffer_Data, sizeof(USB_output_Buffer_Data));
 
 	//dial_setup();
-    //loccSetup();
+    loccSetup();
     //keypad_setup();
 
     sei();
