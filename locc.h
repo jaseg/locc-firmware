@@ -15,4 +15,7 @@ static bool do_next_locc_step(void);
 static void do_locc_step(int);
 
 static bool timer_is_expired(void);
+
+static void set_wait_time(unsigned long);
+
 #endif//__LOCC_H__

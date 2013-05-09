@@ -263,7 +263,7 @@ static void do_locc_step(int step) {
  * set_wait_time() before.
  */
 static bool timer_is_expired(void) {
-	if wait_ticks > 0 {
+	if (wait_ticks > 0) {
 		return false;
 	}
 	return true;
