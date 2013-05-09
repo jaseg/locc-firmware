@@ -12,7 +12,7 @@ void loccPowerUp(void);
 
 static bool do_next_locc_step(void);
 
-static void do_locc_step(unsigned int);
+static void do_locc_step(int);
 
 static bool timer_is_expired(void);
 #endif//__LOCC_H__
