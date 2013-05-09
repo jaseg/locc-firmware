@@ -112,7 +112,7 @@ void setup(){
     RingBuffer_InitBuffer(&USB_input_Buffer, USB_input_Buffer_Data, sizeof(USB_input_Buffer_Data));
     RingBuffer_InitBuffer(&USB_output_Buffer, USB_output_Buffer_Data, sizeof(USB_output_Buffer_Data));
 
-	//dial_setup();
+	dial_setup();
     loccSetup();
     keypad_setup();
 
@@ -171,6 +171,11 @@ void loop() { //one frame
 	uint8_t pressed_key = keypad_scan();
 	if(pressed_key){
 		usb_putc(pressed_key);
+	}
+
+	uint8_t dialled_number = dial_scan();
+	if(dialled_number){
+		usb_putc(dialled_number);
 	}
 
 	//output led and matrix driver signals via shift register

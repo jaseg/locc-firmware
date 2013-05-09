@@ -29,7 +29,7 @@ char dial_scan(){
 	static uint8_t dial_counter = 0;
 	static uint8_t state_impulse = 0;
 
-	int8_t rv = -1;
+	int8_t rv = 0;
 
 	if(state_impulse <= 1){
 		if(IMPULSE_INPUT & (1<<IMPULSE_PIN)){
@@ -51,7 +51,7 @@ char dial_scan(){
 				if(dial_counter >= 10){
 					dial_counter = 0;
 				}
-				rv = dial_counter;
+				rv = '0'+dial_counter;
 				dial_counter = 0;
 			}
 		}else{
@@ -65,15 +65,17 @@ char dial_scan(){
 		if(HANGUP_INPUT & (1<<HANGUP_PIN)){
 			if(state_hangup == 0){
 				state_hangup = 0xFF;
-				rv = -2;
+				rv = 'H';
+			}else{
+				state_hangup = 1;
 			}
-			state_hangup = 1;
 		}else{
 			if(state_hangup == 1){
 				state_hangup = 0xFF;
-				rv = -3;
+				rv = 'h';
+			}else{
+				state_hangup = 0;
 			}
-			state_hangup = 0;
 		}
 	}else{
 		state_hangup--;
