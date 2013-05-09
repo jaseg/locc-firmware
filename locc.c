@@ -246,7 +246,7 @@ static void do_locc_step(int step) {
 		case 1:
 			usb_putc('0');
 			powerup_locc();
-			set_wait_time(2000);
+			set_wait_time(5000);
 			current_locc_step = 2;
 			break;
 		case 2:
