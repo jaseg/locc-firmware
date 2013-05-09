@@ -10,7 +10,7 @@ void loccPoll(void);
 void loccPowerDown(void);
 void loccPowerUp(void);
 
-static bool do_next_locc_step(void);
+bool do_next_locc_step(void);
 
 static void do_locc_step(int);
 
