@@ -145,6 +145,7 @@ void loop() { //one frame
 	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
 	static uint8_t cmd_target = 0;
 	int16_t receive_status = -1;
+	int command = 0;
 
     receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
@@ -156,51 +157,17 @@ void loop() { //one frame
      * o - open lock
      * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
      */
-    if( (!(receive_status < 0)) && (!is_locking) ){
-        CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
-        if(c == '\n' || c == '\r')
-            usb_putc('\n');
-
-        switch(p_state){
-            case WAIT_FOR_NEWLINE:
-                if(c == '\n' || c == '\r')
-                    p_state = WAIT_FOR_CMD_CHAR;
-                break;
-            case WAIT_FOR_CMD_CHAR:
-                switch(c) {
-                    case 'o':
-						// this will trigger the next unlocking-step in each loop from now on.
-						is_locking = true;
-                        //loccStartOpening();
-                        p_state = WAIT_FOR_NEWLINE;
-                        break;
-                    case 'l':
-                        usb_putc('L');
-                        p_state = WAIT_FOR_LED_NUMBER;
-                        break;
-                    case 'h':
-                        //loccPowerDown();
-                        break;
-                    case 'i':
-                        //loccPowerUp();
-                        break;
-                    case '\n':
-                        usb_putc('\r');
-                        break;
-                    default:
-                        p_state = WAIT_FOR_NEWLINE;
-                }
-                break;
-            case WAIT_FOR_LED_NUMBER:
-                cmd_target = c;
-                p_state = WAIT_FOR_LED_VALUE;
-                break;
-            case WAIT_FOR_LED_VALUE:
-                set_led(cmd_target, c-'0');
-                p_state = WAIT_FOR_NEWLINE;
-                break;
-        }
+    if(!(receive_status < 0)) {
+       	if (!is_locking) {
+			command = handle_user_input(c);
+	   	}
+		else {
+			// ignore any input
+		}
     }
+	if (command == 1) {
+		is_locking = true;
+	}
 
 	if (is_locking) {
 		is_locking = do_next_locc_step();
@@ -216,6 +183,57 @@ void loop() { //one frame
 	USB_USBTask();
 
     //_delay_us(255);
+}
+
+int handle_user_input(char c) {
+	int command = 0;
+	
+	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
+	if(c == '\n' || c == '\r') {
+		usb_putc('\n');
+	}
+
+   	switch(p_state) {
+       case WAIT_FOR_NEWLINE:
+           if(c == '\n' || c == '\r')
+               p_state = WAIT_FOR_CMD_CHAR;
+           break;
+       case WAIT_FOR_CMD_CHAR:
+           switch(c) {
+               case 'o':
+                   //loccStartOpening();
+				   command = 1;
+                   p_state = WAIT_FOR_NEWLINE;
+                   break;
+               case 'l':
+                   usb_putc('L');
+                   p_state = WAIT_FOR_LED_NUMBER;
+                   break;
+               case 'h':
+                   //loccPowerDown();
+                   break;
+               case 'i':
+                   //loccPowerUp();
+                   break;
+               case '\n':
+                   usb_putc('\r');
+                   break;
+               default:
+                   p_state = WAIT_FOR_NEWLINE;
+				   break;
+           }
+           break;
+       case WAIT_FOR_LED_NUMBER:
+           cmd_target = c;
+           p_state = WAIT_FOR_LED_VALUE;
+           break;
+       case WAIT_FOR_LED_VALUE:
+           set_led(cmd_target, c-'0');
+           p_state = WAIT_FOR_NEWLINE;
+           break;
+	}
+	
+	return command;
 }
 
 inline void usb_putc(char c){
