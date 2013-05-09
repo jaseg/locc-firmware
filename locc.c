@@ -212,7 +212,7 @@ static void state_machine(enum locc_states new_state) {
     }
 }
 
-static bool do_next_locc_step() {
+static bool do_next_locc_step(void) {
 	if (timer_is_expired()) {
 		usb_putc('^');
 		
@@ -229,6 +229,7 @@ static bool do_next_locc_step() {
 		usb_putc('.');
 	}
 }
+
 static void do_locc_step(int step) {
 	switch(current_locc_step) {
 		case 0:
@@ -261,7 +262,7 @@ static void do_locc_step(int step) {
  * Return true if the timer is finished waiting the time that was set using 
  * set_wait_time() before.
  */
-static bool timer_is_expired() {
+static bool timer_is_expired(void) {
 	if wait_ticks > 0 {
 		return false;
 	}
