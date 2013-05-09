@@ -28,7 +28,7 @@
 #include "c_locc.h"
 #include "locc.h"
 #include "dial.h"
-#include "keypad.h"
+// #include "keypad.h"
 
 #include <LUFA/Drivers/Misc/RingBuffer.h>
 #include <LUFA/Drivers/USB/USB.h>
