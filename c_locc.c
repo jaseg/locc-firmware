@@ -28,7 +28,7 @@
 #include "c_locc.h"
 #include "locc.h"
 #include "dial.h"
-// #include "keypad.h"
+#include "keypad.h"
 
 #include <LUFA/Drivers/Misc/RingBuffer.h>
 #include <LUFA/Drivers/USB/USB.h>
@@ -103,7 +103,6 @@ void setup(){
     //setup spi
 	//SS,MOSI,SCK
 	DDRB |= 0x07;
-	PORTB |= 0x01;
 	//RCLK
 	DDRD |= 0x10;
 	PORTD |= 0x10;
@@ -115,12 +114,12 @@ void setup(){
 
 	//dial_setup();
     loccSetup();
-    //keypad_setup();
+    keypad_setup();
 
     sei();
 }
 
-uint8_t led_states = 0x00;
+uint8_t led_states = 0x07;
 
 //0<=num<3; val=0 => off val>0 => on
 void set_led(uint8_t num, uint8_t val){
@@ -132,11 +131,10 @@ void set_led(uint8_t num, uint8_t val){
 
 void shiftreg_out(){
 	//CAUTION!! This does *not* wait until the byte has been transmitted, thus it must only be called every so-and-so microseconds.
-	SPDR = led_states; //led_states | matrix_selector;
+	SPDR = led_states | 0xF0&(~matrix_selector);
 	while(!(SPSR&(1<<SPIF))){
 		//She waves and opens a door back onto the piazza where her robot cat -- the alien's nightmare intruder in the DMZ -- sleeps, chasing superintelligent dream mice through multidimensional realities. 
 	}
-	led_states ^= 0x07;
 	PORTD &= ~0x10;
 	PORTD |= 0x10;
 }
@@ -169,6 +167,11 @@ void loop() { //one frame
 		is_locking = do_next_locc_step();
 	}
 	
+	uint8_t pressed_key = keypad_scan();
+	if(pressed_key){
+		usb_putc(pressed_key);
+	}
+
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
   	_delay_us(8);
@@ -227,12 +230,21 @@ int handle_user_input(char c) {
            p_state = WAIT_FOR_LED_VALUE;
            break;
        case WAIT_FOR_LED_VALUE:
-           set_led(cmd_target, c-'0');
+		   usb_putc('S');
+           set_led(cmd_target-'0', c-'0');
+		   usb_puthex(led_states);
            p_state = WAIT_FOR_NEWLINE;
            break;
 	}
 	
 	return command;
+}
+
+inline void usb_puthex(char c){
+	char h = c>>4;
+	char l = c&0xF;
+	usb_putc((h<0xA)?(h+'0'):(h+'A'-0xA));
+	usb_putc((l<0xA)?(l+'0'):(l+'A'-0xA));
 }
 
 inline void usb_putc(char c){

@@ -31,7 +31,8 @@ printer.start()
 
 while True:
 	line = sys.stdin.readline()
-	if line == 'o\n':
-		ser.write(b'o\n')
+	ser.write(bytes(line, 'ASCII'))
+	#if line == 'o\n':
+	#	ser.write(b'o\n')
 		#print('SENT COMMAND')
 
