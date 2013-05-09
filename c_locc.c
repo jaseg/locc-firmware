@@ -159,6 +159,7 @@ void loop() { //one frame
     }
 
 	if (!is_locking && command == 1) {
+		usb_putc('O');
 		is_locking = true;
 		start_locking();
 	}
@@ -189,11 +190,6 @@ int handle_user_input(char c) {
 	static uint8_t cmd_target = 0;
 	int command = 0;
 	
-	if(c == '\n' || c == '\r') {
-		usb_putc('\n');
-		usb_putc('>');
-	}
-
    	switch(p_state) {
        case WAIT_FOR_NEWLINE:
            if(c == '\n' || c == '\r')
@@ -208,7 +204,6 @@ int handle_user_input(char c) {
                    p_state = WAIT_FOR_NEWLINE;
                    break;
                case 'l':
-                   usb_putc('L');
                    p_state = WAIT_FOR_LED_NUMBER;
                    break;
                case 'h':
