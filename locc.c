@@ -256,14 +256,14 @@ static void do_locc_step(int step) {
 			set_wait_time(59);
 			break;
 			
-		case 4:
+		case 3:
 			usb_putc('2');
 			open_locc();
 			current_locc_step = 4;
 			set_wait_time(10000);
 			break;
 			
-		case 5:
+		case 4:
 			usb_putc('3');
 			powerdown_locc();
 			current_locc_step = 0;
