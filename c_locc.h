@@ -7,3 +7,4 @@ void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
 
 void usb_putc(char);
+int handle_user_input(char);
