@@ -142,8 +142,7 @@ void shiftreg_out(){
 }
 
 void loop() { //one frame
-	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
-	static uint8_t cmd_target = 0;
+
 	int16_t receive_status = -1;
 	int command = 0;
 
@@ -186,6 +185,8 @@ void loop() { //one frame
 }
 
 int handle_user_input(char c) {
+	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
+	static uint8_t cmd_target = 0;
 	int command = 0;
 	
 	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
