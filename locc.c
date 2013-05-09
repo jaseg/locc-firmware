@@ -61,6 +61,8 @@ enum locc_states { SLEEP, POWERUP, AWAKEN, OPEN, POWERDOWN, RESET };
 volatile unsigned long wait_ticks = 0;
 volatile enum locc_states state = SLEEP;
 
+unsigned int current_locc_step = 0;
+
 static void sendCylinderTelegram(int *telegram, int length);
 static void state_machine(enum locc_states new_state);
 
@@ -210,6 +212,70 @@ static void state_machine(enum locc_states new_state) {
     }
 }
 
+static bool do_next_locc_step() {
+	if (timer_is_expired()) {
+		usb_putc('^');
+		
+		do_locc_step(current_locc_step);
+		current_locc_step = (current_locc_step + 1) % 4; 
+		if (current_locc_step > 0) {
+			return true;
+		} else {
+			return false;
+		}
+		
+	} 
+	else {
+		sb_putc('.');
+	}
+}
+static void do_locc_step(int step) {
+	switch(current_locc_step) {
+		case 0:
+			usb_putc('0');
+			powerup_locc();
+			set_wait_time(50);
+			break;
+			
+		case 1:
+			usb_putc('1');
+			wakeup_locc();
+			set_wait_time(59);
+			break;
+			
+		case 2:
+			usb_putc('2');
+			open_locc();
+			set_wait_time(10000);
+			break;
+			
+		case 3:
+			usb_putc('3');
+			powerdown_locc();
+            set_wait_time(2);
+			break;
+	}
+}
+
+/**
+ * Return true if the timer is finished waiting the time that was set using 
+ * set_wait_time() before.
+ */
+static bool timer_is_expired() {
+	if wait_ticks > 0 {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Set the timer's wait time. Timer is always running in the background and 
+ * will automatically begin decrementing wait_ticks.
+ */
+static void set_wait_time(unsigned long millis) {
+	wait_ticks = millis;
+}
+
 /* Configure I/O Ports */
 void loccSetup(void)
 {
@@ -245,7 +311,8 @@ void loccPowerUp(void) {
 /* proxy method to state_tick */
 ISR(TIMER0_OVF_vect) {
     TCNT0 = 0x06;
-    if((state != SLEEP) &&  (wait_ticks > 0)) {
-            wait_ticks--;
+    // if((state != SLEEP) &&  (wait_ticks > 0)) {
+	if (wait_ticks > 0) {
+    	wait_ticks--;
     }
 }

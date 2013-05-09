@@ -144,6 +144,8 @@ void loop() { //one frame
 	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
 	static uint8_t cmd_target = 0;
 	int16_t receive_status = -1;
+	
+	bool is_locking = false;
 
     receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
@@ -155,7 +157,7 @@ void loop() { //one frame
      * o - open lock
      * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
      */
-    if(!(receive_status < 0)){
+    if( !(receive_status < 0) && (!is_locking) ){
         CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
         if(c == '\n' || c == '\r')
             usb_putc('\n');
@@ -168,7 +170,9 @@ void loop() { //one frame
             case WAIT_FOR_CMD_CHAR:
                 switch(c) {
                     case 'o':
-                        loccStartOpening();
+						// this will trigger the next unlocking-step in each loop from now on.
+						is_locking = true;
+                        //loccStartOpening();
                         p_state = WAIT_FOR_NEWLINE;
                         break;
                     case 'l':
@@ -176,10 +180,10 @@ void loop() { //one frame
                         p_state = WAIT_FOR_LED_NUMBER;
                         break;
                     case 'h':
-                        loccPowerDown();
+                        //loccPowerDown();
                         break;
                     case 'i':
-                        loccPowerUp();
+                        //loccPowerUp();
                         break;
                     case '\n':
                         usb_putc('\r');
@@ -199,11 +203,13 @@ void loop() { //one frame
         }
     }
 
-	loccPoll();
+	if (is_locking) {
+		is_locking = do_next_locc_step();
+	}
 	
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
-  _delay_us(8);
+  	_delay_us(8);
 	shiftreg_out();
 
 	//USB stuff

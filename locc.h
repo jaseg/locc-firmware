@@ -9,4 +9,6 @@ void loccPoll(void);
 
 void loccPowerDown(void);
 void loccPowerUp(void);
+
+static bool do_next_locc_step() 
 #endif//__LOCC_H__
