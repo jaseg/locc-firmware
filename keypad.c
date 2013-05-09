@@ -26,7 +26,6 @@ void keypad_setup(){
     KEYPAD_COLS_PORT |= 0xF<<KEYPAD_COLS_FIRST_PIN;
 }
 
-//FIXME test debouncing
 //CAUTION! This function relies on the caller to apply matrix_selector before the next call
 char keypad_scan(){
     static uint8_t row = 0;
@@ -36,7 +35,6 @@ char keypad_scan(){
 	//0123456789abcdef
 	//deamfbngcohplkji
 	char* lookup = "2580147afedc369b";
-    //FIXME due to a lack of information about the keypad, this does not yet include the decoding logic mapping these arbitrary numbers to pressed keys
     //TODO currently, this only handles key presses, key releases are ignored
     for(uint8_t i=0; i<4; i++){
         if(debouncing[row][i] <= 1){
