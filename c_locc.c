@@ -157,14 +157,10 @@ void loop() { //one frame
      * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
      */
     if(!(receive_status < 0)) {
-       	if (!is_locking) {
-			command = handle_user_input(c);
-	   	}
-		else {
-			// ignore any input
-		}
+		command = handle_user_input(c);
     }
-	if (command == 1) {
+
+	if (!is_locking && command == 1) {
 		is_locking = true;
 		start_locking();
 	}
@@ -190,9 +186,9 @@ int handle_user_input(char c) {
 	static uint8_t cmd_target = 0;
 	int command = 0;
 	
-	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
 	if(c == '\n' || c == '\r') {
 		usb_putc('\n');
+		usb_putc('>');
 	}
 
    	switch(p_state) {
@@ -205,6 +201,7 @@ int handle_user_input(char c) {
                case 'o':
                    //loccStartOpening();
 				   command = 1;
+				   usb_putc('O');
                    p_state = WAIT_FOR_NEWLINE;
                    break;
                case 'l':

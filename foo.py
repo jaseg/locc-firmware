@@ -15,15 +15,23 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import serial
-import time
+import sys, time, serial, threading
 
-ser = serial.Serial("/dev/ttyUSB0", 57600)
+ser = serial.Serial('/dev/serial/by-id/usb-lynxis_jaseg_c-lab_locc_system_6493534313335191E052-if00', 115200)
 
-time.sleep(1)
-ser.write("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nALLHAILDISCORDIAFOOBAR23PONIES!!\n");
-ser.write("\no\n")
-time.sleep(1)
+#ser.write(b'\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nALLHAILDISCORDIAFOOBAR23PONIES!!\n');
+
+def print_serial():
+	while True:
+		sys.stdout.write(str(ser.read(1))[2:-1])
+		sys.stdout.flush()
+printer = threading.Thread(target=print_serial)
+printer.daemon = True
+printer.start()
 
 while True:
-    print ser.readline(),
+	line = sys.stdin.readline()
+	if line == 'o\n':
+		ser.write(b'o\n')
+		#print('SENT COMMAND')
+
