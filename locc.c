@@ -218,17 +218,12 @@ void start_locking(void) {
 
 bool do_next_locc_step(void) {
 	
-	if (timer_is_expired()) {
-		usb_putc('^');
-		
+	// do nothing as long as the timer is still counting down to 0
+	if (timer_is_expired()) {		
 		do_locc_step(current_locc_step);
 	} 
-	else {
-		usb_putc('.');
-	}
 	
-	// current_locc_step = current_locc_step % 4; 
-	
+	// if we are back at step 0 then the lock process was completed
 	if (current_locc_step > 0) {
 		return true;
 	} else {
@@ -239,35 +234,38 @@ bool do_next_locc_step(void) {
 
 static void do_locc_step(int step) {
 	switch(current_locc_step) {
+		// safe state for the beginning
 		case 0:
 			set_wait_time(0);
 			current_locc_step = 1;
 			break;
+		
+		// power up the capacitor, 5 s should be enough for the capacitor to reach 5V.
 		case 1:
-			usb_putc('0');
 			powerup_locc();
 			set_wait_time(5000);
 			current_locc_step = 2;
 			break;
+			
+		// send the wake up call to the lock
 		case 2:
-			usb_putc('1');
 			wakeup_locc();
 			current_locc_step = 3;
 			set_wait_time(59);
 			break;
-			
+		
+		// open the lock and leave it open for 10 s	
 		case 3:
-			usb_putc('2');
 			open_locc();
-			current_locc_step = 4;
 			set_wait_time(10000);
+			current_locc_step = 4;
 			break;
 			
+		// switch of power for the lock (closes it and shuts it down)
 		case 4:
-			usb_putc('3');
 			powerdown_locc();
+			set_wait_time(2);
 			current_locc_step = 0;
-            set_wait_time(2);
 			break;
 	}
 }
