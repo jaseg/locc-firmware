@@ -226,7 +226,7 @@ static bool do_next_locc_step() {
 		
 	} 
 	else {
-		sb_putc('.');
+		usb_putc('.');
 	}
 }
 static void do_locc_step(int step) {
