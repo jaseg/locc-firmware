@@ -217,18 +217,19 @@ bool do_next_locc_step(void) {
 		usb_putc('^');
 		
 		do_locc_step(current_locc_step);
-		current_locc_step = (current_locc_step + 1) % 4; 
-		
-		if (current_locc_step > 0) {
-			return true;
-		} else {
-			return false;
-		}
-		
 	} 
 	else {
 		usb_putc('.');
 	}
+	
+	current_locc_step = (current_locc_step + 1) % 4; 
+	
+	if (current_locc_step > 0) {
+		return true;
+	} else {
+		return false;
+	}
+	
 }
 
 static void do_locc_step(int step) {
