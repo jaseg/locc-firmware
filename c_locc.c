@@ -187,7 +187,7 @@ void loop() { //one frame
 	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
 	USB_USBTask();
 
-    //_delay_us(255);
+    _delay_us(255);
 }
 
 int handle_user_input(char c) {
@@ -218,6 +218,7 @@ int handle_user_input(char c) {
                    //loccPowerUp();
                    break;
                case '\n':
+               case '\r':
                    usb_putc('\r');
                    break;
                default:
@@ -230,9 +231,7 @@ int handle_user_input(char c) {
            p_state = WAIT_FOR_LED_VALUE;
            break;
        case WAIT_FOR_LED_VALUE:
-		   usb_putc('S');
            set_led(cmd_target-'0', c-'0');
-		   usb_puthex(led_states);
            p_state = WAIT_FOR_NEWLINE;
            break;
 	}
