@@ -26,6 +26,12 @@ include $(LUFA_PATH)/Build/lufa_hid.mk
 include $(LUFA_PATH)/Build/lufa_avrdude.mk
 include $(LUFA_PATH)/Build/lufa_atprogram.mk
 
-program:
+program: all
 	dfu-programmer $(MCU) erase
 	dfu-programmer $(MCU) flash $(TARGET).hex
+
+flash-mk2: all
+	avrdude -c avrispmkII -P usb -p m8u2 -v -U flash:w:$(TARGET).hex
+
+flash-dragon: all
+	avrdude -c dragon_isp -P usb -p m8u2 -v -U flash:w:$(TARGET).hex

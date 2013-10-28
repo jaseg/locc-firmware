@@ -26,21 +26,43 @@
 #include <stdio.h>
 
 #include "Descriptors.h"
-#include "srsly/USB.h"
-#include "srsly/CDCClass.h"
 
+#include "c_locc.h"
 #include "locc.h"
 #include "dial.h"
 #include "keypad.h"
+
+#include <LUFA/Drivers/Misc/RingBuffer.h>
+#include <LUFA/Drivers/USB/USB.h>
+#include <LUFA/Drivers/Peripheral/Serial.h>
+
 
 void setup(void);
 void loop(void);
 void set_led(uint8_t num, uint8_t val);
 void shiftreg_out(void);
 void usb_putc(char c);
-void EVENT_USB_Device_ConfigurationChanged(void);
-void EVENT_USB_Device_ControlRequest(void);
 
+/** Circular buffer to hold data from the host before it is sent to the device via the serial port. */
+static RingBuffer_t USB_input_Buffer;
+
+/** Underlying data buffer for \ref USB_input_Buffer, where the stored bytes are located. */
+static uint8_t      USB_input_Buffer_Data[128];
+
+/** Circular buffer to hold data from the serial port before it is sent to the host. */
+static RingBuffer_t USB_output_Buffer;
+
+/** Underlying data buffer for \ref USB_output_Buffer, where the stored bytes are located. */
+static uint8_t      USB_output_Buffer_Data[128];
+
+static bool is_locking = false;
+
+enum protocol_state { WAIT_FOR_NEWLINE, WAIT_FOR_CMD_CHAR, WAIT_FOR_LED_NUMBER, WAIT_FOR_LED_VALUE };
+
+/** LUFA CDC Class driver interface configuration and state information. This structure is
+ *  passed to all CDC Class driver functions, so that multiple instances of the same class
+ *  within a device can be differentiated from one another.
+ */
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
     {
         .Config =
@@ -78,26 +100,30 @@ void setup(){
     //Disable watchdog if enabled by fuses
     MCUSR &= ~(1 << WDRF);
     wdt_disable();
+    
+    // we want to run at 16mhz
+	clock_prescale_set(clock_div_1);
 
     //setup spi
 	//SS,MOSI,SCK
 	DDRB |= 0x07;
-	PORTB |= 0x01;
 	//RCLK
 	DDRD |= 0x10;
 	PORTD |= 0x10;
 	SPCR = (1<<SPE) | (1<<MSTR) | (1<<CPOL) | (1<<CPHA); //spi data rate: f_clk/16 = 1MHz (it's only a few millimeters)
 
+    USB_Init();
+    RingBuffer_InitBuffer(&USB_input_Buffer, USB_input_Buffer_Data, sizeof(USB_input_Buffer_Data));
+    RingBuffer_InitBuffer(&USB_output_Buffer, USB_output_Buffer_Data, sizeof(USB_output_Buffer_Data));
+
 	dial_setup();
     loccSetup();
     keypad_setup();
-	clock_prescale_set(clock_div_1);
-	CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
-    USB_Init();
+
     sei();
 }
 
-uint8_t led_states = 0x00;
+uint8_t led_states = 0x07;
 
 //0<=num<3; val=0 => off val>0 => on
 void set_led(uint8_t num, uint8_t val){
@@ -109,85 +135,57 @@ void set_led(uint8_t num, uint8_t val){
 
 void shiftreg_out(){
 	//CAUTION!! This does *not* wait until the byte has been transmitted, thus it must only be called every so-and-so microseconds.
-	SPDR = led_states; //led_states | matrix_selector;
-	//while(!(SPSR&(1<<SPIF))){
+	SPDR = led_states | 0xF0&(~matrix_selector);
+	while(!(SPSR&(1<<SPIF))){
 		//She waves and opens a door back onto the piazza where her robot cat -- the alien's nightmare intruder in the DMZ -- sleeps, chasing superintelligent dream mice through multidimensional realities. 
-	//}
-	//toggle stc
+	}
 	PORTD &= ~0x10;
 	PORTD |= 0x10;
 }
 
-void loop(){ //one frame
-	static uint8_t protocol_state = 0;
-	static uint8_t cmd_target = 0;
-	int16_t rb = -1;
+void loop() { //one frame
 
-	//CDC_Device_Flush(&VirtualSerial_CDC_Interface);
-	//fputs("FooBar\n", &USBSerialStream);
-    //do{ //Empty the receive buffer
-        rb = fgetc(&USBSerialStream);//CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-		
-        /* Command set:
-         * [command]\n
-         * Commands:
-         * o - open lock
-         * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
-         */
-        if(rb != EOF){
-			char c = rb;
-			//CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
-			//fputc(c, &USBSerialStream);
-			fputs("Foobar\n", &USBSerialStream);
-				  
-			switch(protocol_state){
-				case 0:
-					if(c == '\n')
-						protocol_state = 1;
-					break;
-				case 1:
-					switch(c){
-						case 'o':
-							loccOpen();
-							protocol_state = 0;
-							break;
-						case 'l':
-							protocol_state = 2;
-							break;
-						case '\n':
-							break;
-						default:
-							protocol_state = 0;
-					}
-					break;
-				case 2:
-					cmd_target = c;
-					protocol_state = 3;
-					break;
-				case 3:
-					set_led(cmd_target-'0', c-'0');
-					protocol_state = 0;
-					break;
-			}
-        }
+	int16_t receive_status = -1;
+	int command = 0;
 
-    //}while(rb >= 0);
+    receive_status = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+    Endpoint_SelectEndpoint(VirtualSerial_CDC_Interface.Config.DataINEndpoint.Address);
+    char c = (receive_status & 0xFF);
 
-    //Keypad stuff
-	/*
+    /* Command set:
+     * [command]\n
+     * Commands:
+     * o - open lock
+     * l[a][b] set led [a] to [b] (a, b: ascii chars, b: 0 - off, 1 - on)
+     */
+    if(!(receive_status < 0)) {
+		command = handle_user_input(c);
+    }
+
+	if (!is_locking && command == 1) {
+		usb_putc('O');
+		is_locking = true;
+		start_locking();
+	}
+
+	if (is_locking) {
+		is_locking = do_next_locc_step();
+	}
+	
 	uint8_t pressed_key = keypad_scan();
-	if(pressed_key != 0xFF){
-		if(pressed_key < 0xA){
-			usb_putc('0'+pressed_key);
-		}else{
-			usb_putc('0'-0xA+pressed_key);
-		}
-		usb_putc('\n');
+	if(pressed_key){
+		usb_putc(pressed_key);
+	}
+
+	uint8_t dialled_number = dial_scan();
+	if(dialled_number){
+		usb_putc(dialled_number);
 	}
 	*/
 
 	//output led and matrix driver signals via shift register
 	//CAUTION! This must not be called more often than every like 8 microseconds.
+  	_delay_us(8);
 	shiftreg_out();
 
 	//rotary dial stuff
@@ -224,10 +222,66 @@ void loop(){ //one frame
 	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
 	USB_USBTask();
 
-    //_delay_us(255);
+    _delay_us(255);
 }
 
-void usb_putc(char c){
+int handle_user_input(char c) {
+	static enum protocol_state p_state = WAIT_FOR_NEWLINE;
+	static uint8_t cmd_target = 0;
+	int command = 0;
+	
+   	switch(p_state) {
+       case WAIT_FOR_NEWLINE:
+           if(c == '\n' || c == '\r')
+               p_state = WAIT_FOR_CMD_CHAR;
+           break;
+       case WAIT_FOR_CMD_CHAR:
+           switch(c) {
+               case 'o':
+                   //loccStartOpening();
+				   command = 1;
+				   usb_putc('O');
+                   p_state = WAIT_FOR_NEWLINE;
+                   break;
+               case 'l':
+                   p_state = WAIT_FOR_LED_NUMBER;
+                   break;
+               case 'h':
+                   //loccPowerDown();
+                   break;
+               case 'i':
+                   //loccPowerUp();
+                   break;
+               case '\n':
+               case '\r':
+                   usb_putc('\r');
+                   break;
+               default:
+                   p_state = WAIT_FOR_NEWLINE;
+				   break;
+           }
+           break;
+       case WAIT_FOR_LED_NUMBER:
+           cmd_target = c;
+           p_state = WAIT_FOR_LED_VALUE;
+           break;
+       case WAIT_FOR_LED_VALUE:
+           set_led(cmd_target-'0', c-'0');
+           p_state = WAIT_FOR_NEWLINE;
+           break;
+	}
+	
+	return command;
+}
+
+inline void usb_puthex(char c){
+	char h = c>>4;
+	char l = c&0xF;
+	usb_putc((h<0xA)?(h+'0'):(h+'A'-0xA));
+	usb_putc((l<0xA)?(l+'0'):(l+'A'-0xA));
+}
+
+inline void usb_putc(char c){
 	CDC_Device_SendByte(&VirtualSerial_CDC_Interface, c);
 }
 
@@ -240,3 +294,24 @@ void EVENT_USB_Device_ControlRequest(void)
 {
     CDC_Device_ProcessControlRequest(&VirtualSerial_CDC_Interface);
 }
+
+
+/** Event handler for the CDC Class driver Line Encoding Changed event.
+ *
+ *  \param[in] CDCInterfaceInfo  Pointer to the CDC class interface configuration structure being referenced
+ */
+void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+{
+} 
+ 
+/** Event handler for the library USB Connection event. */
+void EVENT_USB_Device_Connect(void)
+{
+}
+
+/** Event handler for the library USB Disconnection event. */
+void EVENT_USB_Device_Disconnect(void)
+{
+}
+
+

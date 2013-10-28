@@ -29,6 +29,6 @@ extern uint8_t matrix_selector;
 
 void keypad_setup(void);
 //Called to scan the next row of the keypad. Returns the highest pressed digit (0x00-0x09), with A-D being mapped to 0xA-0xD
-uint8_t keypad_scan(void);
+char keypad_scan(void);
 
 #endif//__KEYPAD_H__

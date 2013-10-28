@@ -26,21 +26,21 @@ void keypad_setup(){
     KEYPAD_COLS_PORT |= 0xF<<KEYPAD_COLS_FIRST_PIN;
 }
 
-//FIXME test debouncing
 //CAUTION! This function relies on the caller to apply matrix_selector before the next call
-uint8_t keypad_scan(){
+char keypad_scan(){
     static uint8_t row = 0;
     static uint8_t debouncing[4][4];
     uint8_t row_state = ~(KEYPAD_COLS_INPUT>>KEYPAD_COLS_FIRST_PIN);
-    uint8_t ret = 0xFF;
-    //FIXME due to a lack of information about the keypad, this does not yet include the decoding logic mapping these arbitrary numbers to pressed keys
-    //TODO check whether *that* debouncing actually works
+    uint8_t ret = 0;
+	//0123456789abcdef
+	//deamfbngcohplkji
+	char* lookup = "2580147afedc369b";
     //TODO currently, this only handles key presses, key releases are ignored
-    for(uint8_t i=0; i<4; i++){ //Could loop unrolling make sense here? At least the shifts would then be static
+    for(uint8_t i=0; i<4; i++){
         if(debouncing[row][i] <= 1){
             if(row_state & (1<<i)){
                 if(debouncing[row][i] == 0){
-                    ret = i;
+                    ret = lookup[row*4+i];
                     debouncing[row][i] = 0x40;
                 }
             }else{
@@ -50,8 +50,6 @@ uint8_t keypad_scan(){
             debouncing[row][i]--;
         }
     }
-	if(ret != 0xFF)
-		ret += row*4;
 
 	matrix_selector <<= 1;
 	row++;
