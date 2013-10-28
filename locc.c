@@ -241,33 +241,34 @@ static void do_locc_step(int step) {
 			current_locc_step = 1;
 			break;
 		
-		// power up the capacitor, 5 s should be enough for the capacitor to reach 5V.
-		case 1:
-			powerup_locc();
-			set_wait_time(5000);
-			current_locc_step = 2;
-			break;
-			
 		// send the wake up call to the lock
-		case 2:
+		case 1:
 			wakeup_locc();
-			current_locc_step = 3;
+			current_locc_step = 2;
 			set_wait_time(59);
 			break;
 		
 		// open the lock and leave it open for 10 s	
-		case 3:
+		case 2:
 			open_locc();
-			set_wait_time(10000);
-			current_locc_step = 4;
+			set_wait_time(15000);
+			current_locc_step = 3;
 			break;
 			
 		// switch of power for the lock (closes it and shuts it down)
-		case 4:
+		case 3:
 			powerdown_locc();
-			set_wait_time(2);
+			set_wait_time(5000);
+			current_locc_step = 4;
+			break;
+
+		// power up the capacitor, 5 s should be enough for the capacitor to reach 5V.
+		case 4:
+			powerup_locc();
+			set_wait_time(5000);
 			current_locc_step = 0;
 			break;
+			
 	}
 }
 
@@ -304,7 +305,8 @@ void loccSetup(void)
     TCCR0B = 0x03;
     TCNT0 = 0x06;
 
-    powerdown_locc();
+	powerup_locc();
+    //powerdown_locc();
 }
 
 /* doing state_machine stuff to handle code outside of ISR */
